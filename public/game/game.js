@@ -19,6 +19,7 @@ const TOUCH_BTN_H = 60;
 const HAS_TOUCH = 'ontouchstart' in window;
 const LIVES_MAX = 3;
 const INVINCIBLE_FRAMES = 120; // 2 seconds at 60fps
+const HEART_LOSS_FRAMES = 30;
 
 // --- Colors ---
 const COL = {
@@ -541,7 +542,7 @@ function doFlash() {
         t.fleeing = true;
       }
     }
-    if (flashedCop) { soundSiren(); takeHit(); }
+    if (flashedCop) { soundSiren(); if (invincibleTimer <= 0) takeHit(); }
     return;
   }
 
@@ -560,7 +561,7 @@ function doFlash() {
     soundScoreDing();
   } else if (ahead.type === 'cop') {
     soundSiren();
-    takeHit();
+    if (invincibleTimer <= 0) takeHit();
   } else if (ahead.type === 'patrol') {
     ahead.speed = speed * 2;
     ahead.fleeing = true;
@@ -589,7 +590,7 @@ function takeHit() {
   comboMultiplier = 1;
   soundCollision();
   lives--;
-  heartLossTimer = 30;
+  heartLossTimer = HEART_LOSS_FRAMES;
   if (lives <= 0) {
     triggerGameOver();
   } else {
