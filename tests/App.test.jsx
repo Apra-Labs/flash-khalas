@@ -1,6 +1,14 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import App from '../src/App';
+
+vi.mock('../src/hooks/useFleetStatus', () => ({
+  default: () => ({ members: [], featureComplete: false }),
+}));
+
+vi.mock('../src/hooks/useFleetPipeline', () => ({
+  default: () => ({ tasks: [] }),
+}));
 
 describe('App', () => {
   it('renders the header', () => {
@@ -10,7 +18,7 @@ describe('App', () => {
 
   it('renders the fleet status panel', () => {
     render(<App />);
-    expect(screen.getByText('Fleet Status')).toBeInTheDocument();
+    expect(screen.getByText('APRA FLEET')).toBeInTheDocument();
   });
 
   it('renders the chat panel', () => {
