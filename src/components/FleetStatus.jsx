@@ -6,6 +6,13 @@ function parseElapsed(elapsed) {
   return m * 60 + (s || 0);
 }
 
+function formatTime(ts) {
+  if (!ts) return '';
+  try {
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch { return ''; }
+}
+
 function useMemberTasks(hasBusy) {
   const [taskMap, setTaskMap] = useState({});
 
@@ -43,7 +50,7 @@ function MemberCard({ member, task }) {
 
   return (
     <div
-      className={`member-card ${member.status}`}
+      className={`member-card ${member.status}${expanded ? ' expanded' : ''}`}
       onClick={toggle}
       role="button"
       tabIndex={0}
@@ -51,20 +58,27 @@ function MemberCard({ member, task }) {
     >
       <div className="member-card-header">
         <span className="member-card-status-icon">{member.statusIcon}</span>
+        {member.status === 'busy' && <span className="member-card-busy-dot" aria-hidden="true" />}
         <span className="member-card-name">{member.name}</span>
         <span className="member-card-badge">
           {member.status}{member.elapsed ? ` · ${member.elapsed}` : ''}
         </span>
         <span className="task-expand">{expanded ? '▾' : '▸'}</span>
       </div>
-      {expanded && (
-        <div className="member-card-detail">
+      <div className="member-card-detail">
+        <div className="member-card-detail-inner">
+          {(task?.model || task?.startedAt) && (
+            <div className="member-card-meta">
+              {task.model && <span className="member-card-meta-item model">{task.model}</span>}
+              {task.startedAt && <span className="member-card-meta-item time">{formatTime(task.startedAt)}</span>}
+            </div>
+          )}
           <div className="member-card-prompt-label">PROMPT</div>
           <pre className="member-card-prompt">
             {prompt || 'No active prompt'}
           </pre>
         </div>
-      )}
+      </div>
     </div>
   );
 }

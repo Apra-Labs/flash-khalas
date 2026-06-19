@@ -53,13 +53,24 @@ body {
   gap: 16px;
   padding: 12px 24px;
   background: var(--bg-panel);
-  border-bottom: 2px solid var(--accent-copper);
+  border-bottom: none;
+  position: relative;
+}
+
+.app-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-copper), var(--accent-gold), var(--accent-copper));
 }
 
 .app-header h1 {
   font-size: 18px;
   color: var(--accent-gold);
-  text-shadow: 2px 2px 0 #c4956a;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.45), 2px 2px 0 #c4956a;
 }
 
 .app-header .subtitle {
@@ -86,8 +97,9 @@ body {
   width: var(--sidebar-width);
   display: flex;
   flex-direction: column;
-  background: var(--bg-panel);
-  border-left: 2px solid var(--border-color);
+  background: rgba(22, 33, 62, 0.85);
+  backdrop-filter: blur(12px);
+  border-left: 2px solid rgba(51, 51, 51, 0.5);
 }
 
 /* ─── Fleet Status Panel ─── */
@@ -97,6 +109,24 @@ body {
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
   overflow-y: auto;
+}
+
+.fleet-status::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fleet-status::-webkit-scrollbar-track {
+  background: var(--bg-deepest);
+  border-radius: 3px;
+}
+
+.fleet-status::-webkit-scrollbar-thumb {
+  background: var(--accent-copper);
+  border-radius: 3px;
+}
+
+.fleet-status::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-gold);
 }
 
 .fleet-status h3 {
@@ -126,10 +156,17 @@ body {
   flex-direction: column;
   padding: 10px 14px;
   border-radius: var(--radius);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background: rgba(13, 13, 26, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 51, 51, 0.6);
   cursor: pointer;
   user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.member-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 
 .member-card-header {
@@ -139,16 +176,30 @@ body {
 }
 
 .member-card.busy {
-  border-color: var(--accent-gold);
+  border-color: rgba(255, 215, 0, 0.55);
   animation: pulse-busy 1.5s ease-in-out infinite;
 }
 
-.member-card.idle { border-color: var(--color-success); }
-.member-card.error { border-color: var(--color-error); }
+.member-card.idle { border-color: rgba(76, 175, 80, 0.55); }
+.member-card.error { border-color: rgba(244, 67, 54, 0.55); }
 
 .member-card-status-icon {
   font-size: 18px;
   flex-shrink: 0;
+}
+
+.member-card-busy-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  flex-shrink: 0;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.5); }
+  50% { opacity: 0.5; box-shadow: 0 0 6px 3px rgba(255, 215, 0, 0.2); }
 }
 
 .member-card-name {
@@ -162,6 +213,7 @@ body {
 
 .member-card-badge {
   font-size: 10px;
+  font-family: var(--font-mono);
   padding: 3px 8px;
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
@@ -179,6 +231,82 @@ body {
 @keyframes pulse-busy {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
   50% { box-shadow: 0 0 10px 3px rgba(255, 215, 0, 0.25); }
+}
+
+/* ─── Card Expand / Collapse ─── */
+
+.member-card-detail {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.35s ease, opacity 0.25s ease;
+}
+
+.member-card.expanded .member-card-detail {
+  max-height: 260px;
+  opacity: 1;
+}
+
+.member-card-detail-inner {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 10px;
+}
+
+.member-card-meta {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.member-card-meta-item {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.member-card-meta-item.model { color: var(--color-info); }
+.member-card-meta-item.time { color: var(--text-secondary); }
+
+.member-card-prompt-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.member-card-prompt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-success);
+  background: var(--bg-deepest);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+  overflow-y: auto;
+  max-height: 180px;
+  margin: 0;
+}
+
+.member-card-prompt::-webkit-scrollbar {
+  width: 6px;
+}
+
+.member-card-prompt::-webkit-scrollbar-track {
+  background: var(--bg-deepest);
+  border-radius: 3px;
+}
+
+.member-card-prompt::-webkit-scrollbar-thumb {
+  background: var(--accent-copper);
+  border-radius: 3px;
+}
+
+.member-card-prompt::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-gold);
 }
 
 /* ─── Pipeline ─── */
@@ -304,35 +432,6 @@ body {
   font-size: 10px;
   opacity: 0.4;
   flex-shrink: 0;
-}
-
-.member-card-detail {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.member-card-prompt-label {
-  font-size: 9px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 6px;
-}
-
-.member-card-prompt {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-success);
-  background: var(--bg-deepest);
-  padding: 10px;
-  border-radius: var(--radius-sm);
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.6;
-  overflow-y: auto;
-  max-height: 180px;
-  margin: 0;
 }
 
 /* ─── Task Detail Modal ─── */
@@ -537,9 +636,10 @@ body {
 
 /* ─── Responsive ─── */
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .app-main {
     flex-direction: column;
+    overflow: auto;
   }
 
   .game-section {
@@ -552,13 +652,13 @@ body {
     width: 100%;
     border-left: none;
     border-top: 2px solid var(--border-color);
-    flex-direction: row;
-    max-height: 40vh;
+    flex-direction: column;
+    max-height: none;
   }
 
   .fleet-status {
     flex: 1;
     border-bottom: none;
-    border-right: 1px solid var(--border-color);
+    border-right: none;
   }
 }
