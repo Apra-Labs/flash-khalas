@@ -217,6 +217,7 @@ let npcSpawnInterval = BASE_NPC_INTERVAL;
 let speedMilestones = [];
 let yallaText = '';
 let yallaTimer = 0;
+let yallaFlashTimer = 0;
 let rushCooldown = 0;
 
 // Power-ups (#9)
@@ -480,6 +481,7 @@ function startGame() {
   speedMilestones = [];
   yallaText = '';
   yallaTimer = 0;
+  yallaFlashTimer = 0;
   rushCooldown = 0;
   powerUps = [];
   powerUpDistAccum = 0;
@@ -611,11 +613,13 @@ function update() {
   for (const m of milestones) {
     if (kmh >= m && !speedMilestones.includes(m)) {
       speedMilestones.push(m);
-      yallaText = 'YALLA!';
+      yallaText = `YALLA! ${m} km/h!`;
       yallaTimer = 90;
+      yallaFlashTimer = 10;
     }
   }
   if (yallaTimer > 0) yallaTimer--;
+  if (yallaFlashTimer > 0) yallaFlashTimer--;
 
   // Rush spawns (#8)
   if (distance > 3000) {
@@ -1144,7 +1148,14 @@ function drawHUD() {
     ctx.fillText('⚡ 2xFLASH', indicatorX, indicatorY);
   }
 
-  // Yalla popup (#8)
+  // Yalla popup (#13)
+  if (yallaFlashTimer > 0) {
+    ctx.save();
+    ctx.globalAlpha = (yallaFlashTimer / 10) * 0.35;
+    ctx.fillStyle = COL.gold;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
   if (yallaTimer > 0) {
     ctx.save();
     ctx.globalAlpha = Math.min(yallaTimer / 30, 1);
