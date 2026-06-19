@@ -43,8 +43,8 @@ const LANDMARK_TEMPLATES = [
   { name: 'burjAlArab',   w: 36, h: 90  },
   { name: 'dubaiFrame',   w: 32, h: 100 },
   { name: 'cayanTower',   w: 22, h: 120 },
-  { name: 'museumFuture', w: 56, h: 44  },
-  { name: 'camel',        w: 28, h: 20  },
+  { name: 'museumFuture', w: 56, h: 58  },
+  { name: 'camel',        w: 28, h: 45  },
 ];
 
 // --- Speed milestone messages (#8, #13) ---
@@ -797,14 +797,14 @@ function drawSkyline() {
   // Layer 1: Far — Palm Jumeirah silhouette (very slow scroll)
   const palmTW = 240;
   const palmOff = bgScrollX % palmTW;
-  for (let i = -1; i <= Math.ceil(canvas.width / palmTW) + 1; i++) {
+  for (let i = 0; i <= Math.ceil(canvas.width / palmTW); i++) {
     drawPalmSilhouette(i * palmTW - palmOff);
   }
 
   // Layer 2: Mid — Dubai city skyline (medium scroll, 480px tile)
   const midTW = 480;
   const midOff = midScrollX % midTW;
-  for (let rep = -1; rep <= 1; rep++) {
+  for (let rep = 0; rep <= 1; rep++) {
     const ox = rep * midTW - midOff;
 
     ctx.fillStyle = '#0e2245';
