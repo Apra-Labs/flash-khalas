@@ -21,8 +21,14 @@ function formatDuration(ms) {
   return `${m}m ${s % 60}s`;
 }
 
-function useMemberTasks(hasBusy) {
-  const [taskMap, setTaskMap] = useState({});
+function memberShort(name) {
+  return (name || '').replace('flash-khalas-', '');
+}
+
+const STATUS_ICONS = { done: '✓', running: '▶', error: '✗', timeout: '⏱', interrupted: '—' };
+
+function useAllTasks(hasBusy) {
+  const [tasks, setTasks] = useState([]);
 
   useEffect(() => {
     let active = true;
@@ -31,14 +37,10 @@ function useMemberTasks(hasBusy) {
       try {
         const res = await fetch('/api/pipeline');
         if (!res.ok || !active) return;
-        const tasks = await res.json();
-        const map = {};
-        for (const t of tasks) {
-          if (!map[t.member] || t.startedAt > map[t.member].startedAt) {
-            map[t.member] = t;
-          }
-        }
-        if (active) setTaskMap(map);
+        const data = await res.json();
+        // Sort newest first — no deduplication, keep full history
+        data.sort((a, b) => (b.startedAt || '').localeCompare(a.startedAt || ''));
+        if (active) setTasks(data);
       } catch { /* ignore */ }
     }
 
@@ -47,10 +49,10 @@ function useMemberTasks(hasBusy) {
     return () => { active = false; if (iv) clearInterval(iv); };
   }, [hasBusy]);
 
-  return taskMap;
+  return tasks;
 }
 
-function MemberModal({ member, task, onClose }) {
+function RunModal({ task, member, onClose }) {
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose(); }
     window.addEventListener('keydown', onKey);
@@ -58,15 +60,16 @@ function MemberModal({ member, task, onClose }) {
   }, [onClose]);
 
   const prompt = task?.fullPrompt || task?.prompt;
+  const isRunning = task?.status === 'running';
 
   return (
     <div className="fleet-modal-backdrop" onClick={onClose}>
       <div className="fleet-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="fleet-modal-header">
           <div className="fleet-modal-title">
-            <span style={{ fontSize: 18 }}>{member.statusIcon}</span>
-            {member.status === 'busy' && <span className="member-card-busy-dot" aria-hidden="true" />}
-            <span className="fleet-modal-name">{member.name}</span>
+            {member && <span style={{ fontSize: 18 }}>{member.statusIcon}</span>}
+            {member?.status === 'busy' && <span className="member-card-busy-dot" aria-hidden="true" />}
+            <span className="fleet-modal-name">{task?.member || member?.name}</span>
           </div>
           <button className="fleet-modal-close" onClick={onClose} type="button" autoFocus>✕</button>
         </div>
@@ -74,12 +77,16 @@ function MemberModal({ member, task, onClose }) {
         <div className="fleet-modal-meta">
           <div className="fleet-meta-item">
             <span className="fleet-meta-key">Status</span>
-            <span className={`fleet-meta-val status-${member.status}`}>{member.status}</span>
+            <span className={`fleet-meta-val status-${task?.status || member?.status}`}>
+              {task?.status || member?.status || '—'}
+            </span>
           </div>
-          <div className="fleet-meta-item">
-            <span className="fleet-meta-key">Elapsed</span>
-            <span className="fleet-meta-val">{member.elapsed || '—'}</span>
-          </div>
+          {isRunning && member?.elapsed && (
+            <div className="fleet-meta-item">
+              <span className="fleet-meta-key">Elapsed</span>
+              <span className="fleet-meta-val">{member.elapsed}</span>
+            </div>
+          )}
           {task?.model && (
             <div className="fleet-meta-item">
               <span className="fleet-meta-key">Model</span>
@@ -92,28 +99,22 @@ function MemberModal({ member, task, onClose }) {
               <span className="fleet-meta-val">{formatDuration(task.elapsedMs)}</span>
             </div>
           )}
-          {(task?.tokensIn != null || task?.tokensOut != null) && (
+          {task?.tokensIn != null && (
             <div className="fleet-meta-item">
               <span className="fleet-meta-key">Tokens in</span>
-              <span className="fleet-meta-val">{task.tokensIn?.toLocaleString() || '—'}</span>
+              <span className="fleet-meta-val">{task.tokensIn.toLocaleString()}</span>
             </div>
           )}
           {task?.tokensOut != null && (
             <div className="fleet-meta-item">
               <span className="fleet-meta-key">Tokens out</span>
-              <span className="fleet-meta-val">{task.tokensOut?.toLocaleString() || '—'}</span>
+              <span className="fleet-meta-val">{task.tokensOut.toLocaleString()}</span>
             </div>
           )}
           {task?.startedAt && (
             <div className="fleet-meta-item">
               <span className="fleet-meta-key">Started</span>
               <span className="fleet-meta-val">{formatTime(task.startedAt)}</span>
-            </div>
-          )}
-          {task?.status && (
-            <div className="fleet-meta-item">
-              <span className="fleet-meta-key">Task status</span>
-              <span className={`fleet-meta-val status-${task.status}`}>{task.status}</span>
             </div>
           )}
         </div>
@@ -142,14 +143,14 @@ function MemberModal({ member, task, onClose }) {
   );
 }
 
-function MemberCard({ member, onSelect }) {
+function MemberCard({ member, mostRecentTask, onSelect }) {
   return (
     <div
       className={`member-card ${member.status}`}
-      onClick={() => onSelect(member)}
+      onClick={() => onSelect(mostRecentTask || null, member)}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(member); }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(mostRecentTask || null, member); }}
     >
       <div className="member-card-header">
         <span className="member-card-status-icon">{member.statusIcon}</span>
@@ -164,14 +165,52 @@ function MemberCard({ member, onSelect }) {
   );
 }
 
+function RunHistoryRow({ task, onSelect }) {
+  const icon = STATUS_ICONS[task.status] || '○';
+  const prompt = task.fullPrompt || task.prompt || '';
+
+  return (
+    <button
+      className={`run-row run-row-${task.status}`}
+      onClick={() => onSelect(task, null)}
+      type="button"
+    >
+      <span className="run-row-icon">{icon}</span>
+      <div className="run-row-body">
+        <span className="run-row-member">{memberShort(task.member)}</span>
+        <span className="run-row-prompt">{prompt.slice(0, 80)}</span>
+      </div>
+      <div className="run-row-meta">
+        {task.status === 'running'
+          ? <span className="run-row-live">running…</span>
+          : <span className="run-row-duration">{formatDuration(task.elapsedMs)}</span>
+        }
+        <span className="run-row-time">{formatTime(task.startedAt)}</span>
+      </div>
+    </button>
+  );
+}
+
 export default function FleetStatus({ members }) {
   const hasBusy = members.some((m) => m.status === 'busy');
-  const taskMap = useMemberTasks(hasBusy);
-  const [selected, setSelected] = useState(null);
+  const allTasks = useAllTasks(hasBusy);
+  const [selected, setSelected] = useState(null); // { task, member }
+
+  const memberMap = Object.fromEntries(members.map((m) => [m.name, m]));
+
+  // Most recent task per member for card click
+  const latestByMember = {};
+  for (const t of allTasks) {
+    if (!latestByMember[t.member]) latestByMember[t.member] = t;
+  }
 
   const sorted = [...members].sort(
     (a, b) => parseElapsed(a.elapsed) - parseElapsed(b.elapsed)
   );
+
+  function openModal(task, member) {
+    setSelected({ task, member });
+  }
 
   return (
     <div className="fleet-status">
@@ -181,14 +220,35 @@ export default function FleetStatus({ members }) {
           <div className="status-idle">No fleet members detected</div>
         ) : (
           sorted.map((m) => (
-            <MemberCard key={m.name} member={m} onSelect={setSelected} />
+            <MemberCard
+              key={m.name}
+              member={m}
+              mostRecentTask={latestByMember[m.name]}
+              onSelect={openModal}
+            />
           ))
         )}
       </div>
+
+      {allTasks.length > 0 && (
+        <>
+          <h4 className="run-history-header">RUN HISTORY</h4>
+          <div className="run-history">
+            {allTasks.map((t) => (
+              <RunHistoryRow
+                key={`${t.member}-${t.startedAt}`}
+                task={t}
+                onSelect={openModal}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
       {selected && (
-        <MemberModal
-          member={selected}
-          task={taskMap[selected.name]}
+        <RunModal
+          task={selected.task}
+          member={selected.member || memberMap[selected.task?.member]}
           onClose={() => setSelected(null)}
         />
       )}
