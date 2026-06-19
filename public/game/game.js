@@ -37,32 +37,14 @@ const COL = {
   flash:     '#ffffaa',
 };
 
-// --- Dubai skyline (static background) ---
-const BUILDINGS = [
-  { x: 15,  w: 20, h: 90,  style: 'block' },
-  { x: 45,  w: 14, h: 140, style: 'block' },
-  { x: 68,  w: 8,  h: 220, style: 'spire' },
-  { x: 90,  w: 24, h: 100, style: 'block' },
-  { x: 125, w: 18, h: 70,  style: 'block' },
-  { x: 155, w: 30, h: 60,  style: 'sail' },
-  { x: 200, w: 16, h: 110, style: 'block' },
-  { x: 230, w: 12, h: 160, style: 'spire' },
-  { x: 255, w: 22, h: 80,  style: 'block' },
-  { x: 290, w: 28, h: 120, style: 'block' },
-  { x: 330, w: 10, h: 180, style: 'frame' },
-  { x: 355, w: 20, h: 90,  style: 'block' },
-  { x: 390, w: 16, h: 70,  style: 'block' },
-  { x: 420, w: 24, h: 100, style: 'block' },
-  { x: 450, w: 18, h: 60,  style: 'block' },
-];
-
 // --- Road building templates (#4) ---
 const LANDMARK_TEMPLATES = [
-  { name: 'burjKhalifa', w: 22, h: 140 },
-  { name: 'burjAlArab',  w: 30, h: 80 },
-  { name: 'dubaiFrame',  w: 24, h: 100 },
-  { name: 'cayanTower',  w: 18, h: 110 },
-  { name: 'museumFuture', w: 32, h: 60 },
+  { name: 'burjKhalifa',  w: 26, h: 160 },
+  { name: 'burjAlArab',   w: 36, h: 90  },
+  { name: 'dubaiFrame',   w: 32, h: 100 },
+  { name: 'cayanTower',   w: 22, h: 120 },
+  { name: 'museumFuture', w: 56, h: 44  },
+  { name: 'camel',        w: 28, h: 20  },
 ];
 
 // --- Speed milestone messages (#8, #13) ---
@@ -225,6 +207,10 @@ let distScoreAccum = 0;
 let roadBuildings = [];
 let buildingDistAccum = 0;
 let nextBuildingDist = 200;
+
+// Parallax background scroll offsets
+let bgScrollX = 0;
+let midScrollX = 0;
 
 // Difficulty (#8)
 let npcSpawnInterval = BASE_NPC_INTERVAL;
@@ -746,38 +732,104 @@ function update() {
 // DRAW HELPERS
 // ============================================================
 
+// ============================================================
+// DUBAI PARALLAX BACKGROUND HELPERS
+// ============================================================
+
+function drawPalmSilhouette(ox) {
+  const px = ox + 120;
+  const groundY = 130;
+  ctx.fillStyle = '#050d1a';
+  ctx.strokeStyle = '#050d1a';
+
+  // Artificial crescent island base
+  ctx.beginPath();
+  ctx.arc(px, groundY - 4, 55, Math.PI, 0);
+  ctx.fill();
+
+  // Palm trunk
+  ctx.fillRect(px - 2, groundY - 42, 4, 38);
+
+  // Fronds fanning out
+  ctx.lineWidth = 2;
+  const fronds = [
+    [-75, 30], [-55, 35], [-38, 38], [-20, 36], [-5, 33],
+    [5, 33], [20, 36], [38, 38], [55, 35], [75, 30],
+  ];
+  for (const [angle, len] of fronds) {
+    const rad = (angle - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(px, groundY - 42);
+    ctx.lineTo(px + Math.cos(rad) * len, groundY - 42 + Math.sin(rad) * len);
+    ctx.stroke();
+  }
+}
+
+function drawBurjKhalifaBg(cx, baseline) {
+  ctx.fillStyle = '#0e2245';
+  ctx.fillRect(cx - 11, baseline - 62,  22, 62);
+  ctx.fillRect(cx - 8,  baseline - 90,  16, 28);
+  ctx.fillRect(cx - 5,  baseline - 108, 10, 18);
+  ctx.fillRect(cx - 3,  baseline - 118,  6, 10);
+  ctx.fillRect(cx - 1,  baseline - 130,  2, 30);
+  ctx.fillStyle = '#2a1a00';
+  ctx.fillRect(cx - 1,  baseline - 130,  2,  6);
+  // Tiny crane silhouette (meme: always under construction)
+  ctx.strokeStyle = '#0e2245';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx, baseline - 130);
+  ctx.lineTo(cx, baseline - 137);
+  ctx.lineTo(cx + 9, baseline - 137);
+  ctx.stroke();
+}
+
+function drawDubaiFrameBg(cx, baseline) {
+  ctx.fillStyle = '#3d2a04';
+  ctx.fillRect(cx - 16, baseline - 75,  5, 75);
+  ctx.fillRect(cx + 11, baseline - 75,  5, 75);
+  ctx.fillRect(cx - 16, baseline - 75, 32,  6);
+  ctx.fillStyle = '#050e1e';
+  ctx.fillRect(cx - 11, baseline - 69, 22, 69);
+}
+
 function drawSkyline() {
-  const baseline = 130;
-  for (const b of BUILDINGS) {
-    ctx.fillStyle = '#0a1628';
-    if (b.style === 'spire') {
-      ctx.beginPath();
-      ctx.moveTo(b.x, baseline);
-      ctx.lineTo(b.x + b.w / 2, baseline - b.h);
-      ctx.lineTo(b.x + b.w, baseline);
-      ctx.fill();
-      ctx.fillRect(b.x + b.w / 2 - 1, baseline - b.h - 15, 2, 15);
-    } else if (b.style === 'sail') {
-      ctx.beginPath();
-      ctx.moveTo(b.x, baseline);
-      ctx.quadraticCurveTo(b.x + b.w * 0.3, baseline - b.h * 1.2, b.x + b.w, baseline - b.h);
-      ctx.lineTo(b.x + b.w, baseline);
-      ctx.fill();
-    } else if (b.style === 'frame') {
-      ctx.strokeStyle = '#0a1628';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(b.x, baseline - b.h, b.w, b.h);
-    } else {
-      ctx.fillRect(b.x, baseline - b.h, b.w, b.h);
-      if (b.h > 80) {
-        ctx.fillStyle = '#142640';
-        for (let wy = baseline - b.h + 8; wy < baseline - 4; wy += 12) {
-          for (let wx = b.x + 3; wx < b.x + b.w - 3; wx += 6) {
-            ctx.fillRect(wx, wy, 3, 6);
-          }
-        }
-      }
-    }
+  // Layer 1: Far — Palm Jumeirah silhouette (very slow scroll)
+  const palmTW = 240;
+  const palmOff = bgScrollX % palmTW;
+  for (let i = -1; i <= Math.ceil(canvas.width / palmTW) + 1; i++) {
+    drawPalmSilhouette(i * palmTW - palmOff);
+  }
+
+  // Layer 2: Mid — Dubai city skyline (medium scroll, 480px tile)
+  const midTW = 480;
+  const midOff = midScrollX % midTW;
+  for (let rep = -1; rep <= 1; rep++) {
+    const ox = rep * midTW - midOff;
+
+    ctx.fillStyle = '#0e2245';
+    ctx.fillRect(ox + 5,   130 - 38, 14, 38);
+    ctx.fillRect(ox + 22,  130 - 50, 10, 50);
+    ctx.fillRect(ox + 38,  130 - 42, 16, 42);
+
+    drawBurjKhalifaBg(ox + 90, 130);
+
+    ctx.fillStyle = '#0e2245';
+    ctx.fillRect(ox + 140, 130 - 45, 12, 45);
+    ctx.fillRect(ox + 162, 130 - 33, 18, 33);
+    ctx.fillRect(ox + 188, 130 - 52, 10, 52);
+    ctx.fillRect(ox + 210, 130 - 38, 14, 38);
+
+    drawDubaiFrameBg(ox + 260, 130);
+
+    ctx.fillStyle = '#0e2245';
+    ctx.fillRect(ox + 305, 130 - 40, 16, 40);
+    ctx.fillRect(ox + 330, 130 - 55, 12, 55);
+    ctx.fillRect(ox + 352, 130 - 35, 20, 35);
+    ctx.fillRect(ox + 388, 130 - 45, 10, 45);
+    ctx.fillRect(ox + 412, 130 - 42, 14, 42);
+    ctx.fillRect(ox + 435, 130 - 60,  8, 60);
+    ctx.fillRect(ox + 455, 130 - 35, 16, 35);
   }
 }
 
@@ -827,56 +879,284 @@ function drawSpeedLines() {
   ctx.restore();
 }
 
-// --- Road buildings drawing (#4) ---
+// --- Road buildings drawing (#4) — Dubai landmarks in meme pixel art ---
 function drawRoadBuilding(b) {
-  ctx.fillStyle = '#0a1628';
   const bx = b.x;
   const by = b.y;
+  const cx = bx + b.w / 2;
+  const bot = by + b.h;
 
   if (b.name === 'burjKhalifa') {
-    ctx.beginPath();
-    ctx.moveTo(bx, by + b.h);
-    ctx.lineTo(bx + b.w / 2, by);
-    ctx.lineTo(bx + b.w, by + b.h);
-    ctx.fill();
-    ctx.fillRect(bx + b.w / 2 - 1, by - 12, 2, 12);
-  } else if (b.name === 'burjAlArab') {
-    ctx.beginPath();
-    ctx.moveTo(bx, by + b.h);
-    ctx.quadraticCurveTo(bx + b.w * 0.3, by - b.h * 0.2, bx + b.w, by);
-    ctx.lineTo(bx + b.w, by + b.h);
-    ctx.fill();
-  } else if (b.name === 'dubaiFrame') {
-    ctx.strokeStyle = '#0a1628';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(bx, by, b.w, b.h);
-    ctx.fillRect(bx, by, b.w, 6);
-    ctx.fillRect(bx, by + b.h - 6, b.w, 6);
-  } else if (b.name === 'cayanTower') {
-    const skew = 4;
-    ctx.beginPath();
-    ctx.moveTo(bx, by + b.h);
-    ctx.lineTo(bx + skew, by);
-    ctx.lineTo(bx + b.w + skew, by);
-    ctx.lineTo(bx + b.w, by + b.h);
-    ctx.fill();
-  } else if (b.name === 'museumFuture') {
-    ctx.beginPath();
-    ctx.ellipse(bx + b.w / 2, by + b.h / 2, b.w / 2, b.h / 2, 0, 0, Math.PI * 2);
-    ctx.ellipse(bx + b.w / 2, by + b.h / 2, b.w / 3, b.h / 3, 0, 0, Math.PI * 2, true);
-    ctx.fill('evenodd');
-  } else {
-    ctx.fillRect(bx, by, b.w, b.h);
-  }
+    // Comically tall stepped tower — exaggerated proportions
+    ctx.fillStyle = '#0d2244';
+    ctx.fillRect(cx - 13, bot - 96, 26, 96);     // wide base (60%)
+    ctx.fillStyle = '#102850';
+    ctx.fillRect(cx - 10, bot - 120, 20, 24);    // tier 2
+    ctx.fillStyle = '#122a54';
+    ctx.fillRect(cx - 7,  bot - 136, 14, 16);    // tier 3
+    ctx.fillStyle = '#1a3868';
+    ctx.fillRect(cx - 4,  bot - 147,  8, 11);    // tier 4
+    ctx.fillStyle = '#0e2244';
+    ctx.fillRect(cx - 1,  by,          2, 13);   // spire
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(cx - 1,  by,          2,  3);   // gold needle tip
 
-  // Window lights
-  ctx.fillStyle = '#142640';
-  if (b.name !== 'dubaiFrame' && b.name !== 'museumFuture') {
-    for (let wy = by + 6; wy < by + b.h - 4; wy += 10) {
-      for (let wx = bx + 2; wx < bx + b.w - 2; wx += 5) {
-        ctx.fillRect(wx, wy, 2, 4);
+    // Gold accent bands at tier steps
+    ctx.fillStyle = '#8B6914';
+    ctx.fillRect(cx - 13, bot - 97,  26, 2);
+    ctx.fillRect(cx - 10, bot - 121, 20, 2);
+    ctx.fillRect(cx - 7,  bot - 137, 14, 2);
+    ctx.fillRect(cx - 4,  bot - 148,  8, 2);
+
+    // Amber window grid
+    ctx.fillStyle = 'rgba(200, 150, 40, 0.55)';
+    for (let wy = bot - 92; wy < bot - 4; wy += 9) {
+      for (let wx = cx - 11; wx < cx + 11; wx += 6) {
+        ctx.fillRect(wx, wy, 2, 5);
       }
     }
+
+    // Meme: permanent construction crane at the very top
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + 1, by + 12);
+    ctx.lineTo(cx + 1, by - 8);      // vertical mast
+    ctx.lineTo(cx + 15, by - 8);     // horizontal boom
+    ctx.lineTo(cx - 5,  by - 8);     // counter-weight arm
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + 12, by - 8);
+    ctx.lineTo(cx + 12, by - 2);     // hanging cable
+    ctx.stroke();
+    ctx.fillStyle = '#666';
+    ctx.fillRect(cx + 10, by - 2, 5, 4); // load block
+
+  } else if (b.name === 'burjAlArab') {
+    // Iconic sail shape — convex right side, helipad, tiny yacht
+    // Platform stilt on artificial island
+    ctx.fillStyle = '#0d2244';
+    ctx.fillRect(cx - 5, bot - 10,  10,  10);
+    ctx.fillRect(bx - 4, bot - 15, b.w + 8, 6);
+
+    // Main sail (left nearly straight, right bulges outward)
+    ctx.fillStyle = '#102850';
+    ctx.beginPath();
+    ctx.moveTo(bx + 4,       bot - 15);
+    ctx.lineTo(bx + b.w - 4, bot - 15);
+    ctx.quadraticCurveTo(bx + b.w + 14, by + b.h * 0.45, bx + b.w - 4, by + 8);
+    ctx.lineTo(bx + 4,       by + 8);
+    ctx.closePath();
+    ctx.fill();
+
+    // Horizontal floor striations
+    ctx.fillStyle = '#0a1c3a';
+    for (let wy = by + 12; wy < bot - 18; wy += 6) {
+      ctx.fillRect(bx + 5, wy, b.w - 10, 3);
+    }
+
+    // Helipad platform
+    ctx.fillStyle = '#1a3060';
+    ctx.fillRect(bx, by, b.w, 8);
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, by + 4, 7, 0, Math.PI * 2);
+    ctx.stroke();
+    // H marking
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(cx - 4, by + 1, 2, 6);
+    ctx.fillRect(cx + 2, by + 1, 2, 6);
+    ctx.fillRect(cx - 4, by + 3, 8, 2);
+
+    // Meme: tiny helicopter on the helipad
+    ctx.fillStyle = '#bbb';
+    ctx.fillRect(cx + 3, by + 1, 7, 3);
+    ctx.fillRect(cx + 1, by + 1, 2, 2);
+    ctx.strokeStyle = '#bbb';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 2, by);
+    ctx.lineTo(cx + 13, by);
+    ctx.stroke();
+
+    // Meme: tiny luxury yacht below
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(bx - 14, bot - 10, 12, 5);
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(bx - 9, bot - 16,  1,  6);
+    ctx.beginPath();
+    ctx.moveTo(bx - 9, bot - 16);
+    ctx.lineTo(bx - 4, bot - 11);
+    ctx.lineTo(bx - 9, bot - 11);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+
+  } else if (b.name === 'dubaiFrame') {
+    // Giant gold picture frame — two towers + sky bridge
+    const colW = 5;
+    const gold = '#8B6914';
+
+    ctx.fillStyle = gold;
+    ctx.fillRect(bx,            by, colW,  b.h);     // left column
+    ctx.fillRect(bx + b.w - colW, by, colW,  b.h);  // right column
+    ctx.fillRect(bx,            by, b.w,    8);       // top bridge
+    ctx.fillRect(bx,            by + b.h - 6, b.w, 6); // base
+
+    // Glass inner panel
+    ctx.fillStyle = '#061018';
+    ctx.fillRect(bx + colW, by + 8, b.w - colW * 2, b.h - 14);
+
+    // Observation deck glare (top portion)
+    ctx.fillStyle = 'rgba(100, 150, 220, 0.18)';
+    ctx.fillRect(bx + colW, by + 8, b.w - colW * 2, 14);
+
+    // Mini-Dubai skyline painted inside the glass
+    ctx.fillStyle = '#0a1e3a';
+    ctx.fillRect(bx + colW + 2, by + b.h - 22, 3, 14);
+    ctx.fillRect(bx + colW + 7, by + b.h - 28, 2, 20);
+    ctx.fillRect(bx + colW + 11, by + b.h - 18, 4, 10);
+    ctx.fillRect(bx + b.w - colW - 7, by + b.h - 22, 3, 14);
+
+    // Gold accent lines
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(bx + 1, by + 1, b.w - 2, 2);
+    ctx.fillRect(bx + 1, by + b.h - 3, b.w - 2, 2);
+
+    // Column rivet detail
+    ctx.fillStyle = '#6a4c0a';
+    for (let wy = by + 12; wy < by + b.h - 8; wy += 12) {
+      ctx.fillRect(bx, wy, colW, 2);
+      ctx.fillRect(bx + b.w - colW, wy, colW, 2);
+    }
+
+  } else if (b.name === 'cayanTower') {
+    // Twisted tower — each floor band is progressively rotated
+    const numFloors = 12;
+    const floorH = b.h / numFloors;
+
+    for (let i = 0; i < numFloors; i++) {
+      const t = (numFloors - 1 - i) / (numFloors - 1); // 1=bottom, 0=top
+      const twist = (t - 0.5) * 10;
+      const fy = by + i * floorH;
+      const r = Math.round(13 + i * 2);
+      const g = Math.round(34 + i * 3);
+      const bl = Math.round(68 + i * 4);
+      ctx.fillStyle = `rgb(${r},${g},${bl})`;
+      ctx.fillRect(cx - b.w / 2 + twist, fy, b.w, floorH + 1);
+      // Window band
+      ctx.fillStyle = 'rgba(80,130,220,0.30)';
+      ctx.fillRect(cx - b.w / 2 + twist + 2, fy + 1, b.w - 4, floorH - 2);
+      // Floor divider
+      ctx.fillStyle = '#0a1628';
+      ctx.fillRect(cx - b.w / 2 + twist, fy + floorH - 1, b.w, 1);
+    }
+
+    // Gold twist stripe running up the building
+    ctx.strokeStyle = '#8B6914';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i <= numFloors; i++) {
+      const t = (numFloors - i) / numFloors;
+      const twist = (t - 0.5) * 10;
+      const fy = by + i * (b.h / numFloors);
+      if (i === 0) ctx.moveTo(cx + twist, fy);
+      else ctx.lineTo(cx + twist, fy);
+    }
+    ctx.stroke();
+
+    // Rooftop antenna + red blinker
+    ctx.fillStyle = '#888';
+    ctx.fillRect(cx - 1, by - 5, 2, 5);
+    ctx.fillStyle = (frameTick % 40 < 20) ? '#e74c3c' : '#333';
+    ctx.fillRect(cx - 1, by - 5, 2, 2);
+
+  } else if (b.name === 'museumFuture') {
+    // Iconic torus / ring shape with calligraphy suggestion
+    const mcx = bx + b.w / 2;
+    const mcy = by + b.h / 2;
+    const rx  = b.w / 2;
+    const ry  = b.h / 2;
+    const hrx = rx * 0.52;
+    const hry = ry * 0.52;
+
+    // Outer ring fill
+    ctx.fillStyle = '#0a2040';
+    ctx.beginPath();
+    ctx.ellipse(mcx, mcy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Inner hole
+    ctx.fillStyle = '#061018';
+    ctx.beginPath();
+    ctx.ellipse(mcx, mcy, hrx, hry, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Gold outer rim
+    ctx.strokeStyle = '#8B6914';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(mcx, mcy, rx - 1, ry - 1, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Calligraphy suggestion — gold lines in the ring band
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 1;
+    for (let row = 0; row < 3; row++) {
+      const gy = mcy - ry * 0.25 + row * ry * 0.25;
+      const dyN = (gy - mcy) / ry;
+      const xOut = rx  * Math.sqrt(Math.max(0, 1 - dyN * dyN));
+      const dyNH = (gy - mcy) / hry;
+      const xIn  = Math.abs(dyNH) < 1 ? hrx * Math.sqrt(Math.max(0, 1 - dyNH * dyNH)) : 0;
+      if (xOut > xIn + 3) {
+        ctx.beginPath();
+        ctx.moveTo(mcx - xOut + 2, gy);
+        ctx.lineTo(mcx - xIn  - 2, gy);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(mcx + xIn  + 2, gy);
+        ctx.lineTo(mcx + xOut - 2, gy);
+        ctx.stroke();
+      }
+    }
+
+    // Inner hole edge highlight
+    ctx.strokeStyle = '#0d3060';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(mcx, mcy, hrx - 1, hry - 1, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+  } else if (b.name === 'camel') {
+    // Pixel-art camel strutting through the desert — meme energy
+    ctx.fillStyle = '#c8a450';
+    // Body
+    ctx.fillRect(bx + 2, by + 8, 18, 8);
+    // Hump
+    ctx.fillRect(bx + 4, by + 4,  6, 6);
+    ctx.fillRect(bx + 5, by + 3,  4, 2);
+    // Neck
+    ctx.fillRect(bx + 18, by + 5, 4, 8);
+    // Head
+    ctx.fillRect(bx + 20, by + 2, 6, 5);
+    // Snout / camel lip (exaggerated)
+    ctx.fillRect(bx + 25, by + 5, 2, 3);
+    // Eye
+    ctx.fillStyle = '#222';
+    ctx.fillRect(bx + 22, by + 3, 1, 1);
+    // Legs (4)
+    ctx.fillStyle = '#b89040';
+    ctx.fillRect(bx + 4,  by + 15, 2, 5);
+    ctx.fillRect(bx + 9,  by + 15, 2, 5);
+    ctx.fillRect(bx + 14, by + 15, 2, 5);
+    ctx.fillRect(bx + 18, by + 15, 2, 5);
+    // Tail
+    ctx.fillStyle = '#c8a450';
+    ctx.fillRect(bx,      by + 9,  3, 2);
+    ctx.fillRect(bx,      by + 11, 2, 2);
+
+  } else {
+    ctx.fillStyle = '#0a1628';
+    ctx.fillRect(bx, by, b.w, b.h);
   }
 }
 
@@ -1467,6 +1747,11 @@ function drawLeaderboardOverlay() {
 
 function gameLoop() {
   update();
+
+  // Scroll parallax background (animates on title too at idle rate)
+  const bgSpd = state === 'playing' ? speed * (turboTimer > 0 ? 1.5 : 1) : 1.5;
+  bgScrollX  = (bgScrollX  + bgSpd * 0.010) % 240;
+  midScrollX = (midScrollX + bgSpd * 0.028) % 480;
 
   if (state === 'title') {
     if (showLeaderboardOnTitle) {
