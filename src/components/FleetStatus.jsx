@@ -157,6 +157,9 @@ export default function FleetStatus({ members }) {
                   <span className="task-icon">{icon}</span>
                   <div className="task-summary">
                     <span className="task-label">{label}</span>
+                    <span className="task-prompt-preview">
+                      {(task.fullPrompt || task.prompt || '').slice(0, 120)}
+                    </span>
                     <span className="task-member">{memberShort(task.member)}</span>
                   </div>
                   <div className="task-stats">
