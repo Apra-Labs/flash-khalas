@@ -1,4 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+
+const MAX_MESSAGES = 50;
+
+function appendMessage(prev, msg) {
+  return [...prev.slice(-(MAX_MESSAGES - 1)), msg];
+}
 
 export default function ChatPanel() {
   const [messages, setMessages] = useState([
@@ -6,12 +12,17 @@ export default function ChatPanel() {
   ]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView?.({ behavior: 'smooth' });
+  }, [messages]);
 
   async function handleSend() {
     if (!input.trim() || sending) return;
 
     const prompt = input;
-    setMessages((prev) => [...prev, { role: 'user', text: prompt }]);
+    setMessages((prev) => appendMessage(prev, { role: 'user', text: prompt }));
     setInput('');
     setSending(true);
 
@@ -21,16 +32,15 @@ export default function ChatPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
       });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
       const data = await res.json();
-      setMessages((prev) => [
-        ...prev,
-        { role: 'system', text: data.ok ? data.message : `Error: ${data.error}` },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'system', text: 'Failed to reach fleet server.' },
-      ]);
+      setMessages((prev) =>
+        appendMessage(prev, { role: 'system', text: data.ok ? data.message : `Error: ${data.error}` })
+      );
+    } catch (e) {
+      setMessages((prev) =>
+        appendMessage(prev, { role: 'system', text: e.message || 'Failed to reach fleet server.' })
+      );
     } finally {
       setSending(false);
     }
@@ -45,10 +55,11 @@ export default function ChatPanel() {
       <h3>Fleet Chat</h3>
       <div className="chat-messages">
         {messages.map((msg, i) => (
-          <div key={i} className={`chat-message ${msg.role}`}>
+          <div key={`${i}-${msg.role}`} className={`chat-message ${msg.role}`}>
             {msg.text}
           </div>
         ))}
+        <div ref={bottomRef} />
       </div>
       <div className="chat-input-area">
         <input

@@ -10,10 +10,19 @@ describe('GameFrame', () => {
     expect(iframe.src).not.toContain('?v=');
   });
 
-  it('shows Reloading overlay when featureComplete is true', async () => {
+  it('shows Reloading overlay when featureComplete is true', () => {
     vi.useFakeTimers();
     render(<GameFrame featureComplete={true} />);
     expect(screen.getByText('Reloading...')).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('hides overlay after 1500ms', () => {
+    vi.useFakeTimers();
+    render(<GameFrame featureComplete={true} />);
+    expect(screen.getByText('Reloading...')).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1500));
+    expect(screen.queryByText('Reloading...')).not.toBeInTheDocument();
     vi.useRealTimers();
   });
 

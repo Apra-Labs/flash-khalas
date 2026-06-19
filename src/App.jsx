@@ -1,10 +1,11 @@
 import ChatPanel from './components/ChatPanel';
 import GameFrame from './components/GameFrame';
 import FleetStatus from './components/FleetStatus';
+import ErrorBoundary from './components/ErrorBoundary';
 import useFleetStatus from './hooks/useFleetStatus';
 
 export default function App() {
-  const { members, state, featureComplete } = useFleetStatus();
+  const { members, featureComplete } = useFleetStatus();
 
   return (
     <div className="app-container">
@@ -17,8 +18,12 @@ export default function App() {
           <GameFrame featureComplete={featureComplete} />
         </div>
         <aside className="sidebar">
-          <FleetStatus members={members} pipelineState={state} />
-          <ChatPanel />
+          <ErrorBoundary>
+            <FleetStatus members={members} />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <ChatPanel />
+          </ErrorBoundary>
         </aside>
       </main>
     </div>

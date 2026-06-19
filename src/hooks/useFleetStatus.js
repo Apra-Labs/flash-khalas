@@ -19,26 +19,29 @@ export function parseStatusline(line) {
   return members;
 }
 
+const INITIAL_RETRY_MS = 1000;
+const MAX_RETRY_MS = 30000;
+
 export default function useFleetStatus() {
   const [members, setMembers] = useState([]);
-  const [state, setState] = useState(null);
   const [featureComplete, setFeatureComplete] = useState(false);
   const eventSourceRef = useRef(null);
-  const pollingRef = useRef(null);
+  const retryDelayRef = useRef(INITIAL_RETRY_MS);
+  const retryTimerRef = useRef(null);
 
   const handleData = useCallback((data) => {
     if (typeof data === 'string') {
       if (data === 'connected') return;
-      try { data = JSON.parse(data); } catch (e) { console.warn('Failed to parse SSE data:', e.message); return; }
+      try { data = JSON.parse(data); } catch { return; }
     }
     if (data.statusline) setMembers(parseStatusline(data.statusline));
-    if (data.state) setState(data.state);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
 
     function connectSSE() {
+      if (cancelled) return;
       const es = new EventSource('/api/events');
       eventSourceRef.current = es;
 
@@ -48,26 +51,19 @@ export default function useFleetStatus() {
         setTimeout(() => setFeatureComplete(false), 3000);
       });
 
+      es.onopen = () => {
+        retryDelayRef.current = INITIAL_RETRY_MS;
+      };
+
       es.onerror = () => {
         es.close();
-        if (!cancelled) startPolling();
+        eventSourceRef.current = null;
+        if (cancelled) return;
+        retryTimerRef.current = setTimeout(() => {
+          retryDelayRef.current = Math.min(retryDelayRef.current * 2, MAX_RETRY_MS);
+          connectSSE();
+        }, retryDelayRef.current);
       };
-    }
-
-    function startPolling() {
-      if (pollingRef.current) return;
-      pollingRef.current = setInterval(async () => {
-        try {
-          const res = await fetch('/api/status');
-          if (res.ok) {
-            const data = await res.json();
-            handleData(data);
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-            connectSSE();
-          }
-        } catch (e) { console.warn('Fleet status poll failed:', e.message); }
-      }, 2000);
     }
 
     connectSSE();
@@ -75,9 +71,9 @@ export default function useFleetStatus() {
     return () => {
       cancelled = true;
       eventSourceRef.current?.close();
-      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     };
   }, [handleData]);
 
-  return { members, state, featureComplete };
+  return { members, featureComplete };
 }

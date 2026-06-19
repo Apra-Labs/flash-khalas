@@ -14,6 +14,7 @@ describe('ChatPanel', () => {
 
   it('sends a message on Enter and calls dispatch API', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ ok: true, message: 'Dispatched: "add scoring"' }),
     }));
 
@@ -38,6 +39,7 @@ describe('ChatPanel', () => {
 
   it('clears input after send', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ ok: true, message: 'Done' }),
     }));
 
@@ -60,7 +62,49 @@ describe('ChatPanel', () => {
     fireEvent.click(screen.getByText('SEND'));
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to reach fleet server.')).toBeInTheDocument();
+      expect(screen.getByText('network')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error for non-ok server response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    }));
+
+    render(<ChatPanel />);
+
+    const input = screen.getByPlaceholderText(/power-up/);
+    fireEvent.change(input, { target: { value: 'test error' } });
+    fireEvent.click(screen.getByText('SEND'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Server error: 500/)).toBeInTheDocument();
+    });
+  });
+
+  it('disables input and button while sending', async () => {
+    let resolvePromise;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() =>
+      new Promise((resolve) => { resolvePromise = resolve; })
+    ));
+
+    render(<ChatPanel />);
+
+    const input = screen.getByPlaceholderText(/power-up/);
+    const button = screen.getByText('SEND');
+
+    fireEvent.change(input, { target: { value: 'test' } });
+    fireEvent.click(button);
+
+    expect(input.disabled).toBe(true);
+    expect(screen.getByText('...')).toBeInTheDocument();
+
+    resolvePromise({ ok: true, json: () => Promise.resolve({ ok: true, message: 'Done' }) });
+
+    await waitFor(() => {
+      expect(input.disabled).toBe(false);
+      expect(screen.getByText('SEND')).toBeInTheDocument();
     });
   });
 });

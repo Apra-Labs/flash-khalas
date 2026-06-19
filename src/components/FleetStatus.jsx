@@ -1,137 +1,161 @@
 import { useState } from 'react';
-import useFleetLogs from '../hooks/useFleetLogs';
+import useFleetPipeline from '../hooks/useFleetPipeline';
 
-const STEP_TAGS = {
-  plan: ['execute_prompt'],
-  'review-plan': ['execute_prompt'],
-  implement: ['execute_prompt', 'execute_command'],
-  'review-code': ['execute_prompt'],
-  commit: ['execute_command'],
-  ci: ['execute_command'],
-  pr: ['execute_command'],
+const PHASE_LABELS = {
+  implement: 'Implement',
+  review: 'Code Review',
+  fix: 'Apply Fixes',
 };
 
-const STEPS = [
-  { key: 'plan', label: 'Planning' },
-  { key: 'review-plan', label: 'Review Plan' },
-  { key: 'implement', label: 'Implementing' },
-  { key: 'review-code', label: 'Review Code' },
-  { key: 'commit', label: 'Commit & Push' },
-  { key: 'ci', label: 'CI / Tests' },
-  { key: 'pr', label: 'PR Raised' },
-];
+const PHASE_ICONS = {
+  done: '✓',
+  running: '▶',
+  error: '✗',
+  timeout: '⏱',
+  interrupted: '—',
+};
 
-function formatTs(ts) {
+function formatDuration(ms) {
+  if (!ms) return '—';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return `${m}m ${rem}s`;
+}
+
+function formatTime(ts) {
   if (!ts) return '';
   try {
-    const d = new Date(ts);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   } catch {
-    return ts;
+    return '';
   }
 }
 
-function truncate(str, max) {
-  if (!str) return '';
-  return str.length > max ? str.slice(0, max) + '...' : str;
+function memberShort(name) {
+  if (!name) return '';
+  return name.replace('flash-khalas-', '');
 }
 
-export default function FleetStatus({ members, pipelineState }) {
-  const [expandedStep, setExpandedStep] = useState(null);
+export default function FleetStatus({ members }) {
   const hasBusy = members.some((m) => m.status === 'busy');
-  const { logs } = useFleetLogs(hasBusy);
+  const { tasks } = useFleetPipeline(hasBusy);
+  const [expandedIdx, setExpandedIdx] = useState(null);
 
-  const currentStep = pipelineState?.currentStep || null;
-  const completedSteps = pipelineState?.completedSteps || [];
-  const hasActivity = members.length > 0 || currentStep;
-
-  function getStepState(key) {
-    if (completedSteps.includes(key)) return 'done';
-    if (currentStep === key) return 'active';
-    return 'pending';
-  }
-
-  function getLogsForStep(key) {
-    const tags = STEP_TAGS[key] || [];
-    return logs.filter((l) => tags.includes(l.tag));
-  }
-
-  function toggleStep(key) {
-    setExpandedStep(expandedStep === key ? null : key);
-  }
+  const promptTasks = tasks.filter((t) => t.phase);
 
   return (
     <div className="fleet-status">
-      <h3>Fleet Status</h3>
+      <h3>APRA FLEET</h3>
 
-      {!hasActivity && <p className="status-idle">Idle — type a command to start</p>}
-
-      {members.length > 0 && (
-        <div className="fleet-members">
-          {members.map((m) => (
+      <div className="fleet-members">
+        {members.length === 0 ? (
+          <div className="status-idle">No fleet members detected</div>
+        ) : (
+          members.map((m) => (
             <div key={m.name} className={`member-card ${m.status}`}>
-              <span className="member-card-icon">{m.statusIcon}</span>
-              <div className="member-card-info">
-                <span className="member-card-name">{m.name}</span>
-                <span className="member-card-detail">
-                  {m.status}
-                  {m.elapsed && ` · ${m.elapsed}`}
-                </span>
-              </div>
+              <span className="member-card-status-icon">{m.statusIcon}</span>
+              <span className="member-card-name">{m.name}</span>
+              <span className="member-card-badge">
+                {m.status}
+                {m.elapsed ? ` · ${m.elapsed}` : ''}
+              </span>
             </div>
-          ))}
-        </div>
+          ))
+        )}
+      </div>
+
+      {promptTasks.length > 0 && (
+        <>
+          <h4 className="pipeline-header">PIPELINE</h4>
+          <div className="pipeline-tasks">
+            {promptTasks.map((task, idx) => {
+              const taskKey = `${task.startedAt}-${task.member}`;
+              const isExpanded = expandedIdx === taskKey;
+              const icon = PHASE_ICONS[task.status] || '○';
+              const label = PHASE_LABELS[task.phase] || task.phase;
+
+              return (
+                <div key={taskKey} className="task-wrapper">
+                  <button
+                    className={`task-card ${task.status}`}
+                    onClick={() => setExpandedIdx(isExpanded ? null : taskKey)}
+                    type="button"
+                  >
+                    <span className="task-icon">{icon}</span>
+                    <div className="task-summary">
+                      <span className="task-label">{label}</span>
+                      <span className="task-member">{memberShort(task.member)}</span>
+                    </div>
+                    <div className="task-stats">
+                      {task.status === 'running' ? (
+                        <span className="task-running">running...</span>
+                      ) : (
+                        <>
+                          <span className="task-duration">{formatDuration(task.elapsedMs)}</span>
+                          {task.tokensOut && (
+                            <span className="task-tokens">{task.tokensOut.toLocaleString()} tok</span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <span className="task-expand">{isExpanded ? '▾' : '▸'}</span>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="task-detail">
+                      <div className="detail-grid">
+                        <div className="detail-row">
+                          <span className="detail-key">Member</span>
+                          <span className="detail-val">{task.member}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-key">Model</span>
+                          <span className="detail-val model-badge">{task.model}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-key">Duration</span>
+                          <span className="detail-val">{formatDuration(task.elapsedMs)}</span>
+                        </div>
+                        {(task.tokensIn != null || task.tokensOut != null) && (
+                          <div className="detail-row">
+                            <span className="detail-key">Tokens</span>
+                            <span className="detail-val">
+                              {task.tokensIn?.toLocaleString() || '—'} in / {task.tokensOut?.toLocaleString() || '—'} out
+                            </span>
+                          </div>
+                        )}
+                        <div className="detail-row">
+                          <span className="detail-key">Started</span>
+                          <span className="detail-val">{formatTime(task.startedAt)}</span>
+                        </div>
+                        {task.endedAt && (
+                          <div className="detail-row">
+                            <span className="detail-key">Ended</span>
+                            <span className="detail-val">{formatTime(task.endedAt)}</span>
+                          </div>
+                        )}
+                        <div className="detail-row">
+                          <span className="detail-key">Status</span>
+                          <span className={`detail-val status-${task.status}`}>{task.status}</span>
+                        </div>
+                      </div>
+                      <div className="detail-prompt">
+                        <span className="detail-key">Prompt</span>
+                        <pre className="prompt-text">{task.prompt}</pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
-      {hasActivity && (
-        <div className="pipeline-steps">
-          {STEPS.map((step) => {
-            const state = getStepState(step.key);
-            const isExpanded = expandedStep === step.key;
-            const stepLogs = isExpanded ? getLogsForStep(step.key) : [];
-
-            return (
-              <div key={step.key} className="step-wrapper">
-                <button
-                  className={`step-card ${state}`}
-                  onClick={() => toggleStep(step.key)}
-                  type="button"
-                >
-                  <span className="step-icon">
-                    {state === 'done' ? '✓' : state === 'active' ? '▶' : '○'}
-                  </span>
-                  <span className="step-label">{step.label}</span>
-                  {state === 'active' && (
-                    <span className="step-elapsed">running...</span>
-                  )}
-                  <span className="step-expand">{isExpanded ? '▾' : '▸'}</span>
-                </button>
-
-                {isExpanded && (
-                  <div className="step-logs">
-                    {stepLogs.length === 0 ? (
-                      <div className="log-empty">No log entries yet</div>
-                    ) : (
-                      stepLogs.slice(-20).map((entry, i) => (
-                        <div key={i} className="log-entry">
-                          <span className="log-ts">{formatTs(entry.ts)}</span>
-                          <span className="log-member">{entry.member}</span>
-                          <span className="log-msg">{truncate(entry.message, 80)}</span>
-                          {entry.tokens && (
-                            <span className="log-tokens">tok:{entry.tokens}</span>
-                          )}
-                          {entry.elapsed && (
-                            <span className="log-elapsed">{entry.elapsed}</span>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+      {promptTasks.length === 0 && members.length > 0 && (
+        <div className="status-idle">Idle — dispatch a task to start the pipeline</div>
       )}
     </div>
   );
