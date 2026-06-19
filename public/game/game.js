@@ -216,7 +216,9 @@ let nextBuildingDist = 200;
 let npcSpawnInterval = BASE_NPC_INTERVAL;
 let speedMilestones = [];
 let yallaText = '';
+let yallaSubText = '';
 let yallaTimer = 0;
+let yallaFlashTimer = 0;
 let rushCooldown = 0;
 
 // Power-ups (#9)
@@ -479,7 +481,9 @@ function startGame() {
   npcSpawnInterval = BASE_NPC_INTERVAL;
   speedMilestones = [];
   yallaText = '';
+  yallaSubText = '';
   yallaTimer = 0;
+  yallaFlashTimer = 0;
   rushCooldown = 0;
   powerUps = [];
   powerUpDistAccum = 0;
@@ -605,17 +609,25 @@ function update() {
   // Difficulty: spawn interval (#8)
   npcSpawnInterval = Math.max(30, BASE_NPC_INTERVAL - Math.floor(distance / 500));
 
-  // Speed milestones (#8)
+  // Speed milestones (#8, #13)
   const kmh = Math.floor(speed * 20);
-  const milestones = [80, 100, 120, 140, 160];
-  for (const m of milestones) {
+  const MILESTONE_MSGS = {
+    80:  ['YALLA!',        'SHEIKH ZAYED APPROVED'],
+    100: ['YALLA HABIBI!', '100 KM/H - MASHALLAH!'],
+    120: ['YALLA YALLA!',  'DUBAI SPEED UNLOCKED'],
+    140: ['KHALAS SLOW!',  '140 KM/H - WALLAH!'],
+    160: ['MAXIMUM YALLA!','BURJ KHALIFA FAST!'],
+  };
+  for (const m of Object.keys(MILESTONE_MSGS).map(Number)) {
     if (kmh >= m && !speedMilestones.includes(m)) {
       speedMilestones.push(m);
-      yallaText = 'YALLA!';
-      yallaTimer = 90;
+      [yallaText, yallaSubText] = MILESTONE_MSGS[m];
+      yallaTimer = 120;
+      yallaFlashTimer = 12;
     }
   }
   if (yallaTimer > 0) yallaTimer--;
+  if (yallaFlashTimer > 0) yallaFlashTimer--;
 
   // Rush spawns (#8)
   if (distance > 3000) {
@@ -1144,17 +1156,6 @@ function drawHUD() {
     ctx.fillText('⚡ 2xFLASH', indicatorX, indicatorY);
   }
 
-  // Yalla popup (#8)
-  if (yallaTimer > 0) {
-    ctx.save();
-    ctx.globalAlpha = Math.min(yallaTimer / 30, 1);
-    ctx.fillStyle = COL.gold;
-    ctx.font = '18px "Press Start 2P", monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(yallaText, canvas.width / 2, 200);
-    ctx.restore();
-  }
-
   // Flash hint at bottom
   ctx.textAlign = 'center';
   ctx.font = '8px "Press Start 2P", monospace';
@@ -1175,6 +1176,55 @@ function drawTurboGlow() {
   ctx.fillStyle = '#e74c3c';
   ctx.fillRect(0, 0, 10, canvas.height);
   ctx.fillRect(canvas.width - 10, 0, 10, canvas.height);
+  ctx.restore();
+}
+
+function drawYallaFlash() {
+  if (yallaFlashTimer <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = (yallaFlashTimer / 12) * 0.45;
+  ctx.fillStyle = COL.gold;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+
+function drawYallaPopup() {
+  if (yallaTimer <= 0) return;
+  ctx.save();
+  // Fade in for first 20 frames, hold, fade out last 40 frames
+  const alpha = yallaTimer > 100 ? (120 - yallaTimer) / 20
+              : yallaTimer < 40  ? yallaTimer / 40
+              : 1;
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+  // Scale: pop up then settle
+  const scale = yallaTimer > 100 ? 0.6 + (120 - yallaTimer) / 20 * 0.5 : 1;
+  ctx.translate(canvas.width / 2, canvas.height / 2 - 60);
+  ctx.scale(scale, scale);
+
+  // Background pill
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.beginPath();
+  ctx.roundRect(-130, -36, 260, 80, 10);
+  ctx.fill();
+
+  // Gold border
+  ctx.strokeStyle = COL.gold;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Main text
+  ctx.fillStyle = COL.gold;
+  ctx.font = 'bold 22px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(yallaText, 0, -10);
+
+  // Sub text
+  ctx.fillStyle = '#fff';
+  ctx.font = '7px "Press Start 2P", monospace';
+  ctx.fillText(yallaSubText, 0, 22);
+
   ctx.restore();
 }
 
@@ -1444,7 +1494,9 @@ function gameLoop() {
     }
     drawFlashEffect();
     drawTurboGlow();
+    drawYallaFlash();
     drawHUD();
+    drawYallaPopup();
     drawTouchButtons();
 
     if (state === 'gameover') {
