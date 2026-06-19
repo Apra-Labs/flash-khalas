@@ -64,7 +64,7 @@ const LANDMARK_TEMPLATES = [
 
 // --- Audio system (#6) ---
 let audioCtx = null;
-let audioMuted = JSON.parse(localStorage.getItem('fk_muted') || 'false');
+let audioMuted = (() => { try { return JSON.parse(localStorage.getItem('fk_muted') || 'false'); } catch { return false; } })();
 let engineOsc = null;
 let engineGain = null;
 let audioStarted = false;
@@ -143,7 +143,7 @@ function updateEngine() {
 
 function toggleMute() {
   audioMuted = !audioMuted;
-  localStorage.setItem('fk_muted', JSON.stringify(audioMuted));
+  try { localStorage.setItem('fk_muted', JSON.stringify(audioMuted)); } catch {}
   if (engineGain) engineGain.gain.value = audioMuted ? 0 : 0.08;
 }
 
@@ -154,7 +154,7 @@ function loadLeaderboard() {
 }
 
 function saveLeaderboard(lb) {
-  localStorage.setItem('fk_leaderboard', JSON.stringify(lb.slice(0, 10)));
+  try { localStorage.setItem('fk_leaderboard', JSON.stringify(lb.slice(0, 10))); } catch {}
 }
 
 function isHighScore(s) {
@@ -175,11 +175,12 @@ function addLeaderboardEntry(initials, s) {
 
 // --- High score (#5) ---
 function loadHighScore() {
-  return parseInt(localStorage.getItem('fk_highscore') || '0', 10);
+  try { return parseInt(localStorage.getItem('fk_highscore') || '0', 10); }
+  catch { return 0; }
 }
 
 function saveHighScore(s) {
-  if (s > loadHighScore()) localStorage.setItem('fk_highscore', String(s));
+  try { if (s > loadHighScore()) localStorage.setItem('fk_highscore', String(s)); } catch {}
 }
 
 // --- State ---
@@ -819,13 +820,8 @@ function drawRoadBuilding(b) {
   } else if (b.name === 'museumFuture') {
     ctx.beginPath();
     ctx.ellipse(bx + b.w / 2, by + b.h / 2, b.w / 2, b.h / 2, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.save();
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
-    ctx.ellipse(bx + b.w / 2, by + b.h / 2, b.w / 3, b.h / 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    ctx.ellipse(bx + b.w / 2, by + b.h / 2, b.w / 3, b.h / 3, 0, 0, Math.PI * 2, true);
+    ctx.fill('evenodd');
   } else {
     ctx.fillRect(bx, by, b.w, b.h);
   }
