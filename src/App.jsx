@@ -1,4 +1,3 @@
-import ChatPanel from './components/ChatPanel';
 import GameFrame from './components/GameFrame';
 import FleetStatus from './components/FleetStatus';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -20,9 +19,6 @@ export default function App() {
         <aside className="sidebar">
           <ErrorBoundary>
             <FleetStatus members={members} />
-          </ErrorBoundary>
-          <ErrorBoundary>
-            <ChatPanel />
           </ErrorBoundary>
         </aside>
       </main>
