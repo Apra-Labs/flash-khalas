@@ -190,6 +190,20 @@ function mergeDispatchData(tasks, dispatches, transcriptData) {
   return tasks;
 }
 
+async function autoRecordDispatches(tasks, existingDispatches) {
+  const newEntries = [];
+  for (const task of tasks) {
+    if (!task.startedAt || !task.member || !task.prompt) continue;
+    const alreadyRecorded = existingDispatches.some((d) => matchesDispatch(task, d));
+    if (!alreadyRecorded) {
+      newEntries.push({ ts: task.startedAt, member: task.member, prompt: task.prompt, response: null });
+    }
+  }
+  if (newEntries.length === 0) return;
+  await mkdir(DATA_DIR, { recursive: true });
+  await appendFile(DISPATCHES_PATH, newEntries.map((e) => JSON.stringify(e)).join('\n') + '\n');
+}
+
 app.post('/api/dispatches', async (req, res) => {
   const { ts, member, prompt, response } = req.body;
   if (!member || !prompt) {
@@ -210,6 +224,7 @@ app.get('/api/pipeline', async (_req, res) => {
     ]);
     if (!raw) return res.json([]);
     const tasks = parsePipelineTasks(raw);
+    await autoRecordDispatches(tasks, dispatches);
     res.json(mergeDispatchData(tasks, dispatches, transcriptData));
   } catch (err) {
     console.warn('Failed to parse pipeline:', err.message);
