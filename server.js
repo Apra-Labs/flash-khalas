@@ -71,7 +71,7 @@ function matchesDispatch(task, dispatch) {
   if (dispatch.member !== task.member) return false;
   const taskTs = new Date(task.startedAt).getTime();
   const dTs = new Date(dispatch.ts).getTime();
-  if (Math.abs(dTs - taskTs) < 60000) return true;
+  if (Math.abs(dTs - taskTs) < 300000) return true;
   if (task.prompt && dispatch.prompt) {
     const truncated = task.prompt.replace(/\.{3}$/, '');
     if (dispatch.prompt.startsWith(truncated)) return true;
