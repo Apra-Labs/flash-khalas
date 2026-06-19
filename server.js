@@ -28,18 +28,14 @@ async function readSafe(path) {
   }
 }
 
-async function readLatestLogFile() {
+async function readAllLogFiles() {
   const files = await readdir(LOGS_DIR).catch(() => []);
   const logFiles = files.filter((f) => /^fleet-\d+\.log$/.test(f));
   if (logFiles.length === 0) return null;
-  const withMtime = await Promise.all(
-    logFiles.map(async (f) => {
-      const s = await stat(join(LOGS_DIR, f)).catch(() => null);
-      return { name: f, mtime: s ? s.mtimeMs : 0 };
-    })
+  const contents = await Promise.all(
+    logFiles.map((f) => readSafe(join(LOGS_DIR, f)))
   );
-  withMtime.sort((a, b) => b.mtime - a.mtime);
-  return readSafe(join(LOGS_DIR, withMtime[0].name));
+  return contents.filter(Boolean).join('\n');
 }
 
 let lastDispatchMs = 0;
@@ -71,17 +67,28 @@ async function readDispatches() {
   return entries;
 }
 
+function matchesDispatch(task, dispatch) {
+  if (dispatch.member !== task.member) return false;
+  const taskTs = new Date(task.startedAt).getTime();
+  const dTs = new Date(dispatch.ts).getTime();
+  if (Math.abs(dTs - taskTs) < 60000) return true;
+  if (task.prompt && dispatch.prompt) {
+    const truncated = task.prompt.replace(/\.{3}$/, '');
+    if (dispatch.prompt.startsWith(truncated)) return true;
+  }
+  return false;
+}
+
 function mergeDispatchData(tasks, dispatches) {
   for (const task of tasks) {
-    const taskTs = new Date(task.startedAt).getTime();
-    const match = dispatches.find((d) => {
-      if (d.member !== task.member) return false;
-      const dTs = new Date(d.ts).getTime();
-      return Math.abs(dTs - taskTs) < 30000;
-    });
-    if (match) {
-      if (match.prompt) task.fullPrompt = match.prompt;
-      if (match.response) task.response = match.response;
+    let best = null;
+    for (const d of dispatches) {
+      if (!matchesDispatch(task, d)) continue;
+      if (!best || d.response) best = d;
+    }
+    if (best) {
+      if (best.prompt) task.fullPrompt = best.prompt;
+      if (best.response) task.response = best.response;
     }
   }
   return tasks;
@@ -101,7 +108,7 @@ app.post('/api/dispatches', async (req, res) => {
 app.get('/api/pipeline', async (_req, res) => {
   try {
     const [raw, dispatches] = await Promise.all([
-      readLatestLogFile(),
+      readAllLogFiles(),
       readDispatches(),
     ]);
     if (!raw) return res.json([]);

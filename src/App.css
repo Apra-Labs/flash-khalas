@@ -248,6 +248,16 @@ body {
   font-weight: bold;
 }
 
+.task-prompt-preview {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-weight: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .task-member {
   font-size: 9px;
   color: var(--text-secondary);
@@ -423,8 +433,6 @@ body {
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.7;
-  max-height: 280px;
-  overflow-y: auto;
 }
 
 .modal-code.response {
