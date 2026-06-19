@@ -1,6 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import FleetStatus from '../src/components/FleetStatus';
+
+vi.mock('../src/hooks/useFleetLogs', () => ({
+  default: () => ({ logs: [], getLogsForStep: () => [] }),
+}));
 
 describe('FleetStatus', () => {
   it('shows idle when no members and no state', () => {
@@ -8,7 +12,7 @@ describe('FleetStatus', () => {
     expect(screen.getByText(/Idle/)).toBeInTheDocument();
   });
 
-  it('shows member badges', () => {
+  it('shows member cards', () => {
     const members = [
       { icon: '🔵', id: 2, name: 'flash-khalas-doer', statusIcon: '⚡', status: 'busy', elapsed: '02:14' },
       { icon: '🟢', id: 2, name: 'flash-khalas-reviewer', statusIcon: '💤', status: 'idle', elapsed: null },
@@ -43,5 +47,21 @@ describe('FleetStatus', () => {
       />
     );
     expect(screen.getByText(/Review Code/)).toBeInTheDocument();
+  });
+
+  it('renders step cards with correct icons', () => {
+    render(
+      <FleetStatus
+        members={[]}
+        pipelineState={{
+          currentStep: 'implement',
+          completedSteps: ['plan', 'review-plan'],
+        }}
+      />
+    );
+    const buttons = screen.getAllByRole('button');
+    expect(buttons[0].textContent).toContain('✓');
+    expect(buttons[2].textContent).toContain('▶');
+    expect(buttons[3].textContent).toContain('○');
   });
 });
