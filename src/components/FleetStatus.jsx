@@ -61,14 +61,14 @@ function MemberModal({ member, task, onClose }) {
 
   return (
     <div className="fleet-modal-backdrop" onClick={onClose}>
-      <div className="fleet-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="fleet-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="fleet-modal-header">
           <div className="fleet-modal-title">
             <span style={{ fontSize: 18 }}>{member.statusIcon}</span>
             {member.status === 'busy' && <span className="member-card-busy-dot" aria-hidden="true" />}
             <span className="fleet-modal-name">{member.name}</span>
           </div>
-          <button className="fleet-modal-close" onClick={onClose} type="button">✕</button>
+          <button className="fleet-modal-close" onClick={onClose} type="button" autoFocus>✕</button>
         </div>
 
         <div className="fleet-modal-meta">
