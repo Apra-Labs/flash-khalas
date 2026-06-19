@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { readFile, readdir, stat, mkdir, writeFile } from 'fs/promises';
+import { readFile, readdir, stat, mkdir, writeFile, appendFile } from 'fs/promises';
 import { watchFile, unwatchFile, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -13,11 +13,12 @@ const LOGS_DIR = join(DATA_DIR, 'logs');
 const STATUSLINE_PATH = join(DATA_DIR, 'statusline.txt');
 const STATE_PATH = join(DATA_DIR, 'statusline-state.json');
 const REQUEST_PATH = join(DATA_DIR, 'flash-khalas-request.json');
+const DISPATCHES_PATH = join(DATA_DIR, 'flash-khalas-dispatches.jsonl');
 
 if (process.env.NODE_ENV !== 'production') {
   app.use(cors());
 }
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '100kb' }));
 
 async function readSafe(path) {
   try {
@@ -59,11 +60,53 @@ app.post('/api/dispatch', async (req, res) => {
   res.json({ ok: true, message: `Dispatched: "${prompt}"` });
 });
 
+async function readDispatches() {
+  const raw = await readSafe(DISPATCHES_PATH);
+  if (!raw) return [];
+  const entries = [];
+  for (const line of raw.split('\n')) {
+    if (!line.trim()) continue;
+    try { entries.push(JSON.parse(line)); } catch { continue; }
+  }
+  return entries;
+}
+
+function mergeDispatchData(tasks, dispatches) {
+  for (const task of tasks) {
+    const taskTs = new Date(task.startedAt).getTime();
+    const match = dispatches.find((d) => {
+      if (d.member !== task.member) return false;
+      const dTs = new Date(d.ts).getTime();
+      return Math.abs(dTs - taskTs) < 30000;
+    });
+    if (match) {
+      if (match.prompt) task.fullPrompt = match.prompt;
+      if (match.response) task.response = match.response;
+    }
+  }
+  return tasks;
+}
+
+app.post('/api/dispatches', async (req, res) => {
+  const { ts, member, prompt, response } = req.body;
+  if (!member || !prompt) {
+    return res.status(400).json({ error: 'member and prompt are required' });
+  }
+  await mkdir(DATA_DIR, { recursive: true });
+  const entry = JSON.stringify({ ts: ts || new Date().toISOString(), member, prompt, response: response || null });
+  await appendFile(DISPATCHES_PATH, entry + '\n');
+  res.json({ ok: true });
+});
+
 app.get('/api/pipeline', async (_req, res) => {
   try {
-    const raw = await readLatestLogFile();
+    const [raw, dispatches] = await Promise.all([
+      readLatestLogFile(),
+      readDispatches(),
+    ]);
     if (!raw) return res.json([]);
-    res.json(parsePipelineTasks(raw));
+    const tasks = parsePipelineTasks(raw);
+    res.json(mergeDispatchData(tasks, dispatches));
   } catch (err) {
     console.warn('Failed to parse pipeline:', err.message);
     res.json([]);

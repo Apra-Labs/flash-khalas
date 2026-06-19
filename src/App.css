@@ -191,11 +191,6 @@ body {
   gap: 4px;
 }
 
-.task-wrapper {
-  display: flex;
-  flex-direction: column;
-}
-
 .task-card {
   display: flex;
   align-items: center;
@@ -294,64 +289,146 @@ body {
   flex-shrink: 0;
 }
 
-/* ─── Task Detail Panel ─── */
+/* ─── Task Detail Modal ─── */
 
-.task-detail {
-  background: var(--bg-deep);
-  border-left: 4px solid var(--accent-copper);
-  padding: 14px 16px;
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
 }
 
-.detail-grid {
-  display: grid;
-  grid-template-columns: 90px 1fr;
-  gap: 8px 12px;
-  margin-bottom: 14px;
+.modal-content {
+  background: var(--bg-panel);
+  border: 2px solid var(--accent-copper);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 680px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
-.detail-row { display: contents; }
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
 
-.detail-key {
-  font-size: 10px;
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-icon {
+  font-size: 18px;
+}
+
+.modal-icon.status-done { color: var(--color-success); }
+.modal-icon.status-running { color: var(--accent-gold); }
+.modal-icon.status-error { color: var(--color-error); }
+.modal-icon.status-timeout { color: var(--color-warning); }
+
+.modal-label {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  background: none;
+  border: 1px solid var(--border-color);
   color: var(--text-secondary);
+  font-size: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-pixel);
+}
+
+.modal-close:hover {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: white;
+}
+
+.modal-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-deep);
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.meta-key {
+  font-size: 9px;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
-.detail-val {
-  font-size: 11px;
+.meta-val {
+  font-size: 12px;
   color: var(--text-primary);
-  word-break: break-all;
 }
 
-.detail-val.model-badge { color: var(--color-info); }
-.detail-val.status-done { color: var(--color-success); }
-.detail-val.status-running { color: var(--accent-gold); }
-.detail-val.status-error { color: var(--color-error); }
-.detail-val.status-timeout { color: var(--color-warning); }
+.meta-val.model-badge { color: var(--color-info); }
+.meta-val.status-done { color: var(--color-success); }
+.meta-val.status-running { color: var(--accent-gold); }
+.meta-val.status-error { color: var(--color-error); }
+.meta-val.status-timeout { color: var(--color-warning); }
 
-.detail-prompt {
-  border-top: 1px solid var(--border-subtle);
-  padding-top: 10px;
+.modal-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.detail-prompt .detail-key {
-  display: block;
-  margin-bottom: 6px;
+.modal-section:last-child {
+  border-bottom: none;
 }
 
-.prompt-text {
-  font-family: var(--font-mono);
+.modal-section h4 {
   font-size: 11px;
+  color: var(--accent-copper);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+
+.modal-code {
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--color-success);
   background: var(--bg-deepest);
-  padding: 10px;
+  padding: 14px;
   border-radius: var(--radius-sm);
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.6;
-  max-height: 200px;
+  line-height: 1.7;
+  max-height: 280px;
   overflow-y: auto;
+}
+
+.modal-code.response {
+  color: var(--color-info);
 }
 
 /* ─── Chat Panel ─── */

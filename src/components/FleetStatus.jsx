@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useFleetPipeline from '../hooks/useFleetPipeline';
 
 const PHASE_LABELS = {
@@ -38,10 +38,82 @@ function memberShort(name) {
   return name.replace('flash-khalas-', '');
 }
 
+function TaskModal({ task, onClose }) {
+  const label = PHASE_LABELS[task.phase] || task.phase;
+  const promptText = task.fullPrompt || task.prompt;
+
+  useEffect(() => {
+    function handleKey(e) { if (e.key === 'Escape') onClose(); }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title">
+            <span className={`modal-icon status-${task.status}`}>
+              {PHASE_ICONS[task.status] || '○'}
+            </span>
+            <span className="modal-label">{label}</span>
+          </div>
+          <button className="modal-close" onClick={onClose} type="button">✕</button>
+        </div>
+
+        <div className="modal-meta">
+          <div className="meta-item">
+            <span className="meta-key">Member</span>
+            <span className="meta-val">{task.member}</span>
+          </div>
+          <div className="meta-item">
+            <span className="meta-key">Model</span>
+            <span className="meta-val model-badge">{task.model}</span>
+          </div>
+          <div className="meta-item">
+            <span className="meta-key">Duration</span>
+            <span className="meta-val">{formatDuration(task.elapsedMs)}</span>
+          </div>
+          {(task.tokensIn != null || task.tokensOut != null) && (
+            <div className="meta-item">
+              <span className="meta-key">Tokens</span>
+              <span className="meta-val">
+                {task.tokensIn?.toLocaleString() || '—'} in / {task.tokensOut?.toLocaleString() || '—'} out
+              </span>
+            </div>
+          )}
+          <div className="meta-item">
+            <span className="meta-key">Time</span>
+            <span className="meta-val">
+              {formatTime(task.startedAt)}{task.endedAt ? ` → ${formatTime(task.endedAt)}` : ''}
+            </span>
+          </div>
+          <div className="meta-item">
+            <span className="meta-key">Status</span>
+            <span className={`meta-val status-${task.status}`}>{task.status}</span>
+          </div>
+        </div>
+
+        <div className="modal-section">
+          <h4>Prompt</h4>
+          <pre className="modal-code">{promptText}</pre>
+        </div>
+
+        {task.response && (
+          <div className="modal-section">
+            <h4>Response</h4>
+            <pre className="modal-code response">{task.response}</pre>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function FleetStatus({ members }) {
   const hasBusy = members.some((m) => m.status === 'busy');
   const { tasks } = useFleetPipeline(hasBusy);
-  const [expandedIdx, setExpandedIdx] = useState(null);
+  const [modalTask, setModalTask] = useState(null);
 
   const promptTasks = tasks.filter((t) => t.phase);
 
@@ -70,84 +142,37 @@ export default function FleetStatus({ members }) {
         <>
           <h4 className="pipeline-header">PIPELINE</h4>
           <div className="pipeline-tasks">
-            {promptTasks.map((task, idx) => {
+            {promptTasks.map((task) => {
               const taskKey = `${task.startedAt}-${task.member}`;
-              const isExpanded = expandedIdx === taskKey;
               const icon = PHASE_ICONS[task.status] || '○';
               const label = PHASE_LABELS[task.phase] || task.phase;
 
               return (
-                <div key={taskKey} className="task-wrapper">
-                  <button
-                    className={`task-card ${task.status}`}
-                    onClick={() => setExpandedIdx(isExpanded ? null : taskKey)}
-                    type="button"
-                  >
-                    <span className="task-icon">{icon}</span>
-                    <div className="task-summary">
-                      <span className="task-label">{label}</span>
-                      <span className="task-member">{memberShort(task.member)}</span>
-                    </div>
-                    <div className="task-stats">
-                      {task.status === 'running' ? (
-                        <span className="task-running">running...</span>
-                      ) : (
-                        <>
-                          <span className="task-duration">{formatDuration(task.elapsedMs)}</span>
-                          {task.tokensOut && (
-                            <span className="task-tokens">{task.tokensOut.toLocaleString()} tok</span>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    <span className="task-expand">{isExpanded ? '▾' : '▸'}</span>
-                  </button>
-
-                  {isExpanded && (
-                    <div className="task-detail">
-                      <div className="detail-grid">
-                        <div className="detail-row">
-                          <span className="detail-key">Member</span>
-                          <span className="detail-val">{task.member}</span>
-                        </div>
-                        <div className="detail-row">
-                          <span className="detail-key">Model</span>
-                          <span className="detail-val model-badge">{task.model}</span>
-                        </div>
-                        <div className="detail-row">
-                          <span className="detail-key">Duration</span>
-                          <span className="detail-val">{formatDuration(task.elapsedMs)}</span>
-                        </div>
-                        {(task.tokensIn != null || task.tokensOut != null) && (
-                          <div className="detail-row">
-                            <span className="detail-key">Tokens</span>
-                            <span className="detail-val">
-                              {task.tokensIn?.toLocaleString() || '—'} in / {task.tokensOut?.toLocaleString() || '—'} out
-                            </span>
-                          </div>
+                <button
+                  key={taskKey}
+                  className={`task-card ${task.status}`}
+                  onClick={() => setModalTask(task)}
+                  type="button"
+                >
+                  <span className="task-icon">{icon}</span>
+                  <div className="task-summary">
+                    <span className="task-label">{label}</span>
+                    <span className="task-member">{memberShort(task.member)}</span>
+                  </div>
+                  <div className="task-stats">
+                    {task.status === 'running' ? (
+                      <span className="task-running">running...</span>
+                    ) : (
+                      <>
+                        <span className="task-duration">{formatDuration(task.elapsedMs)}</span>
+                        {task.tokensOut && (
+                          <span className="task-tokens">{task.tokensOut.toLocaleString()} tok</span>
                         )}
-                        <div className="detail-row">
-                          <span className="detail-key">Started</span>
-                          <span className="detail-val">{formatTime(task.startedAt)}</span>
-                        </div>
-                        {task.endedAt && (
-                          <div className="detail-row">
-                            <span className="detail-key">Ended</span>
-                            <span className="detail-val">{formatTime(task.endedAt)}</span>
-                          </div>
-                        )}
-                        <div className="detail-row">
-                          <span className="detail-key">Status</span>
-                          <span className={`detail-val status-${task.status}`}>{task.status}</span>
-                        </div>
-                      </div>
-                      <div className="detail-prompt">
-                        <span className="detail-key">Prompt</span>
-                        <pre className="prompt-text">{task.prompt}</pre>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                      </>
+                    )}
+                  </div>
+                  <span className="task-expand">▸</span>
+                </button>
               );
             })}
           </div>
@@ -157,6 +182,8 @@ export default function FleetStatus({ members }) {
       {promptTasks.length === 0 && members.length > 0 && (
         <div className="status-idle">Idle — dispatch a task to start the pipeline</div>
       )}
+
+      {modalTask && <TaskModal task={modalTask} onClose={() => setModalTask(null)} />}
     </div>
   );
 }
