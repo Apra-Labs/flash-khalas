@@ -123,12 +123,19 @@ body {
 
 .member-card {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
   padding: 10px 14px;
   border-radius: var(--radius);
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
+  cursor: pointer;
+  user-select: none;
+}
+
+.member-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .member-card.busy {
@@ -297,6 +304,35 @@ body {
   font-size: 10px;
   opacity: 0.4;
   flex-shrink: 0;
+}
+
+.member-card-detail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.member-card-prompt-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.member-card-prompt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-success);
+  background: var(--bg-deepest);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+  overflow-y: auto;
+  max-height: 180px;
+  margin: 0;
 }
 
 /* ─── Task Detail Modal ─── */
