@@ -6,6 +6,8 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { parsePipelineTasks } from './lib/pipeline.js';
 
+const CLAUDE_PROJECTS_DIR = join(homedir(), '.claude', 'projects');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const DATA_DIR = join(homedir(), '.apra-fleet', 'data');
@@ -26,6 +28,91 @@ async function readSafe(path) {
   } catch {
     return null;
   }
+}
+
+function extractTaskId(prompt) {
+  const m = (prompt || '').match(/^\[([a-z0-9]+)\]/);
+  return m ? m[1] : null;
+}
+
+function workFolderToClaudeProjectDir(workFolder) {
+  return join(CLAUDE_PROJECTS_DIR, workFolder.replace(/\//g, '-'));
+}
+
+async function readSessionFiles(memberName, projectDir) {
+  const files = await readdir(projectDir).catch(() => []);
+  const runs = [];
+
+  await Promise.all(
+    files
+      .filter((f) => /^[0-9a-f-]{36}\.jsonl$/.test(f))
+      .map(async (file) => {
+        const raw = await readSafe(join(projectDir, file));
+        if (!raw) return;
+
+        let currentRun = null;
+        let lastResponse = null;
+
+        for (const line of raw.split('\n')) {
+          if (!line.trim()) continue;
+          let entry;
+          try { entry = JSON.parse(line); } catch { continue; }
+
+          if (entry.type === 'queue-operation' && entry.operation === 'enqueue') {
+            if (currentRun) {
+              if (lastResponse) currentRun.response = lastResponse;
+              runs.push(currentRun);
+            }
+            currentRun = {
+              member: memberName,
+              taskId: extractTaskId(entry.content),
+              response: null,
+            };
+            lastResponse = null;
+          } else if (entry.type === 'assistant' && currentRun) {
+            const content = entry.message?.content;
+            if (Array.isArray(content)) {
+              const text = content.filter((c) => c.type === 'text').map((c) => c.text).join('');
+              if (text) lastResponse = text;
+            }
+          }
+        }
+
+        if (currentRun) {
+          if (lastResponse) currentRun.response = lastResponse;
+          runs.push(currentRun);
+        }
+      })
+  );
+
+  return runs;
+}
+
+async function readAllTranscriptData() {
+  const registryRaw = await readSafe(join(DATA_DIR, 'registry.json'));
+  if (!registryRaw) return {};
+  let registry;
+  try { registry = JSON.parse(registryRaw); } catch { return {}; }
+
+  const agents = Array.isArray(registry.agents) ? registry.agents : [];
+  const byTaskId = {};
+
+  await Promise.all(
+    agents.map(async (agent) => {
+      const memberName = agent.friendlyName;
+      const workFolder = agent.workFolder;
+      if (!memberName || !workFolder) return;
+      const projectDir = workFolderToClaudeProjectDir(workFolder);
+      const runs = await readSessionFiles(memberName, projectDir);
+      for (const run of runs) {
+        if (run.taskId && run.response) {
+          byTaskId[run.taskId] = run.response;
+        }
+      }
+    })
+  );
+
+  return byTaskId;
 }
 
 async function readAllLogFiles() {
@@ -79,8 +166,9 @@ function matchesDispatch(task, dispatch) {
   return false;
 }
 
-function mergeDispatchData(tasks, dispatches) {
+function mergeDispatchData(tasks, dispatches, transcriptData) {
   for (const task of tasks) {
+    // Explicit PM dispatches take priority
     let best = null;
     for (const d of dispatches) {
       if (!matchesDispatch(task, d)) continue;
@@ -89,6 +177,14 @@ function mergeDispatchData(tasks, dispatches) {
     if (best) {
       if (best.prompt) task.fullPrompt = best.prompt;
       if (best.response) task.response = best.response;
+    }
+
+    // Fall back to Claude session transcript for response
+    if (!task.response && transcriptData) {
+      const taskId = extractTaskId(task.prompt);
+      if (taskId && transcriptData[taskId]) {
+        task.response = transcriptData[taskId];
+      }
     }
   }
   return tasks;
@@ -107,13 +203,14 @@ app.post('/api/dispatches', async (req, res) => {
 
 app.get('/api/pipeline', async (_req, res) => {
   try {
-    const [raw, dispatches] = await Promise.all([
+    const [raw, dispatches, transcriptData] = await Promise.all([
       readAllLogFiles(),
       readDispatches(),
+      readAllTranscriptData(),
     ]);
     if (!raw) return res.json([]);
     const tasks = parsePipelineTasks(raw);
-    res.json(mergeDispatchData(tasks, dispatches));
+    res.json(mergeDispatchData(tasks, dispatches, transcriptData));
   } catch (err) {
     console.warn('Failed to parse pipeline:', err.message);
     res.json([]);
