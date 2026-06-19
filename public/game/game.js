@@ -1159,7 +1159,7 @@ function drawHUD() {
   if (yallaTimer > 0) {
     ctx.save();
     ctx.globalAlpha = Math.min(yallaTimer / 30, 1);
-    ctx.fillStyle = COL.gold;
+    ctx.fillStyle = yallaFlashTimer > 0 ? '#1a1a1a' : COL.gold;
     ctx.font = '18px "Press Start 2P", monospace';
     ctx.textAlign = 'center';
     ctx.fillText(yallaText, canvas.width / 2, 200);
