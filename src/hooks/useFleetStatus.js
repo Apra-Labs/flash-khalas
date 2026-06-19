@@ -28,7 +28,7 @@ export default function useFleetStatus() {
   const handleData = useCallback((data) => {
     if (typeof data === 'string') {
       if (data === 'connected') return;
-      try { data = JSON.parse(data); } catch { return; }
+      try { data = JSON.parse(data); } catch (e) { console.warn('Failed to parse SSE data:', e.message); return; }
     }
     if (data.statusline) setMembers(parseStatusline(data.statusline));
     if (data.state) setState(data.state);
@@ -65,7 +65,7 @@ export default function useFleetStatus() {
             pollingRef.current = null;
             connectSSE();
           }
-        } catch {}
+        } catch (e) { console.warn('Fleet status poll failed:', e.message); }
       }, 2000);
     }
 

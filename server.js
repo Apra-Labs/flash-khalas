@@ -13,7 +13,7 @@ const STATE_PATH = join(DATA_DIR, 'statusline-state.json');
 const REQUEST_PATH = join(DATA_DIR, 'flash-khalas-request.json');
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10kb' }));
 
 async function readSafe(path) {
   try {
@@ -40,7 +40,7 @@ app.get('/api/status', async (_req, res) => {
   ]);
   let state = null;
   if (stateRaw) {
-    try { state = JSON.parse(stateRaw); } catch {}
+    try { state = JSON.parse(stateRaw); } catch (e) { console.warn('Failed to parse statusline-state.json:', e.message); }
   }
   res.json({ statusline: statusline?.trim() || null, state });
 });
@@ -61,7 +61,7 @@ app.get('/api/events', (req, res) => {
     const stateRaw = await readSafe(STATE_PATH);
     let state = null;
     if (stateRaw) {
-      try { state = JSON.parse(stateRaw); } catch {}
+      try { state = JSON.parse(stateRaw); } catch (e) { console.warn('Failed to parse statusline-state.json in SSE:', e.message); }
     }
     res.write(`data: ${JSON.stringify({ statusline: content.trim(), state })}\n\n`);
     if (content.includes('feature-complete')) {
