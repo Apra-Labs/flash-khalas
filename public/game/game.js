@@ -62,6 +62,16 @@ const LANDMARK_TEMPLATES = [
   { name: 'museumFuture', w: 32, h: 60 },
 ];
 
+// --- Speed milestone messages (#8, #13) ---
+const MILESTONE_MSGS = {
+  80:  ['YALLA!',        'SHEIKH ZAYED APPROVED'],
+  100: ['YALLA HABIBI!', '100 KM/H - MASHALLAH!'],
+  120: ['YALLA YALLA!',  'DUBAI SPEED UNLOCKED'],
+  140: ['KHALAS SLOW!',  '140 KM/H - WALLAH!'],
+  160: ['MAXIMUM YALLA!','BURJ KHALIFA FAST!'],
+};
+const MILESTONE_SPEEDS = Object.keys(MILESTONE_MSGS).map(Number);
+
 // --- Audio system (#6) ---
 let audioCtx = null;
 let audioMuted = (() => { try { return JSON.parse(localStorage.getItem('fk_muted') || 'false'); } catch { return false; } })();
@@ -611,14 +621,7 @@ function update() {
 
   // Speed milestones (#8, #13)
   const kmh = Math.floor(speed * 20);
-  const MILESTONE_MSGS = {
-    80:  ['YALLA!',        'SHEIKH ZAYED APPROVED'],
-    100: ['YALLA HABIBI!', '100 KM/H - MASHALLAH!'],
-    120: ['YALLA YALLA!',  'DUBAI SPEED UNLOCKED'],
-    140: ['KHALAS SLOW!',  '140 KM/H - WALLAH!'],
-    160: ['MAXIMUM YALLA!','BURJ KHALIFA FAST!'],
-  };
-  for (const m of Object.keys(MILESTONE_MSGS).map(Number)) {
+  for (const m of MILESTONE_SPEEDS) {
     if (kmh >= m && !speedMilestones.includes(m)) {
       speedMilestones.push(m);
       [yallaText, yallaSubText] = MILESTONE_MSGS[m];
@@ -1197,8 +1200,9 @@ function drawYallaPopup() {
               : 1;
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
 
-  // Scale: pop up then settle
-  const scale = yallaTimer > 100 ? 0.6 + (120 - yallaTimer) / 20 * 0.5 : 1;
+  // Scale: ease-out pop from 0.6→1.0 over the 20-frame intro, hold at 1.0 after
+  const introT = Math.min((120 - yallaTimer) / 20, 1); // 0→1 over first 20 frames
+  const scale = 0.6 + 0.4 * (1 - Math.pow(1 - introT, 3)); // cubic ease-out
   ctx.translate(canvas.width / 2, canvas.height / 2 - 60);
   ctx.scale(scale, scale);
 
