@@ -6,10 +6,6 @@ vi.mock('../src/hooks/useFleetStatus', () => ({
   default: () => ({ members: [], featureComplete: false }),
 }));
 
-vi.mock('../src/hooks/useFleetPipeline', () => ({
-  default: () => ({ tasks: [] }),
-}));
-
 describe('App', () => {
   it('renders the header', () => {
     render(<App />);
@@ -19,11 +15,6 @@ describe('App', () => {
   it('renders the fleet status panel', () => {
     render(<App />);
     expect(screen.getByText('APRA FLEET')).toBeInTheDocument();
-  });
-
-  it('renders the chat panel', () => {
-    render(<App />);
-    expect(screen.getByText('Fleet Chat')).toBeInTheDocument();
   });
 
   it('renders the game iframe', () => {

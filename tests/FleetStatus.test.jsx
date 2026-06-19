@@ -1,27 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import FleetStatus from '../src/components/FleetStatus';
-
-vi.mock('../src/hooks/useFleetPipeline', () => ({
-  default: () => ({
-    tasks: [
-      {
-        member: 'flash-khalas-doer',
-        model: 'claude-sonnet-4-6',
-        prompt: 'Implement issue #12...',
-        fullPrompt: 'Implement issue #12: Add a lives system (3 lives before game over).',
-        response: 'Done. Added lives system with 3 lives.',
-        startedAt: '2026-06-19T12:00:00+04:00',
-        endedAt: '2026-06-19T12:01:00+04:00',
-        status: 'done',
-        phase: 'implement',
-        tokensIn: 10,
-        tokensOut: 500,
-        elapsedMs: 60000,
-      },
-    ],
-  }),
-}));
 
 describe('FleetStatus', () => {
   it('shows no members message when empty', () => {
@@ -40,39 +19,6 @@ describe('FleetStatus', () => {
     expect(screen.getByText(/02:14/)).toBeInTheDocument();
   });
 
-  it('shows pipeline tasks as clickable cards', () => {
-    const members = [
-      { icon: '🟢2', name: 'flash-khalas-doer', statusIcon: '💤', status: 'idle', elapsed: null },
-    ];
-    render(<FleetStatus members={members} />);
-    expect(screen.getByText('Implement')).toBeInTheDocument();
-    expect(screen.getByText('1m 0s')).toBeInTheDocument();
-  });
-
-  it('opens modal with full prompt and response on task click', () => {
-    const members = [
-      { icon: '🟢2', name: 'flash-khalas-doer', statusIcon: '💤', status: 'idle', elapsed: null },
-    ];
-    render(<FleetStatus members={members} />);
-    fireEvent.click(screen.getByText('Implement'));
-
-    expect(screen.getByText(/Implement issue #12: Add a lives system/)).toBeInTheDocument();
-    expect(screen.getByText(/Added lives system with 3 lives/)).toBeInTheDocument();
-    expect(screen.getByText('claude-sonnet-4-6')).toBeInTheDocument();
-  });
-
-  it('closes modal on close button click', () => {
-    const members = [
-      { icon: '🟢2', name: 'flash-khalas-doer', statusIcon: '💤', status: 'idle', elapsed: null },
-    ];
-    render(<FleetStatus members={members} />);
-    fireEvent.click(screen.getByText('Implement'));
-    expect(screen.getByText(/Implement issue #12/)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('✕'));
-    expect(screen.queryByText(/Implement issue #12: Add a lives/)).not.toBeInTheDocument();
-  });
-
   it('applies busy animation class', () => {
     const members = [
       { icon: '🔵2', name: 'flash-khalas-doer', statusIcon: '⚡', status: 'busy', elapsed: '01:00' },
@@ -80,5 +26,27 @@ describe('FleetStatus', () => {
     render(<FleetStatus members={members} />);
     const card = screen.getByText('flash-khalas-doer').closest('.member-card');
     expect(card.classList.contains('busy')).toBe(true);
+  });
+
+  it('sorts busy members before idle', () => {
+    const members = [
+      { icon: '🟢2', name: 'flash-khalas-reviewer', statusIcon: '💤', status: 'idle', elapsed: null },
+      { icon: '🔵2', name: 'flash-khalas-doer', statusIcon: '⚡', status: 'busy', elapsed: '01:00' },
+    ];
+    render(<FleetStatus members={members} />);
+    const names = [...document.querySelectorAll('.member-card .member-card-name')].map((el) => el.textContent);
+    expect(names[0]).toBe('flash-khalas-doer');
+    expect(names[1]).toBe('flash-khalas-reviewer');
+  });
+
+  it('sorts busy members with less elapsed time first', () => {
+    const members = [
+      { icon: '🔵2', name: 'flash-khalas-doer', statusIcon: '⚡', status: 'busy', elapsed: '05:00' },
+      { icon: '🔵2', name: 'flash-khalas-fixer', statusIcon: '⚡', status: 'busy', elapsed: '01:30' },
+    ];
+    render(<FleetStatus members={members} />);
+    const names = [...document.querySelectorAll('.member-card .member-card-name')].map((el) => el.textContent);
+    expect(names[0]).toBe('flash-khalas-fixer');
+    expect(names[1]).toBe('flash-khalas-doer');
   });
 });
