@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { readFile, readdir, mkdir, writeFile } from 'fs/promises';
+import { readFile, readdir, stat, mkdir, writeFile } from 'fs/promises';
 import { watchFile, unwatchFile, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -37,17 +37,19 @@ app.post('/api/dispatch', async (req, res) => {
 app.get('/api/logs', async (_req, res) => {
   try {
     const files = await readdir(LOGS_DIR).catch(() => []);
-    const logFiles = files
-      .filter((f) => /^fleet-\d+\.log$/.test(f))
-      .sort((a, b) => {
-        const pidA = parseInt(a.match(/fleet-(\d+)\.log/)[1], 10);
-        const pidB = parseInt(b.match(/fleet-(\d+)\.log/)[1], 10);
-        return pidB - pidA;
-      });
+    const logFiles = files.filter((f) => /^fleet-\d+\.log$/.test(f));
 
     if (logFiles.length === 0) return res.json([]);
 
-    const raw = await readSafe(join(LOGS_DIR, logFiles[0]));
+    const withMtime = await Promise.all(
+      logFiles.map(async (f) => {
+        const s = await stat(join(LOGS_DIR, f)).catch(() => null);
+        return { name: f, mtime: s ? s.mtimeMs : 0 };
+      })
+    );
+    withMtime.sort((a, b) => b.mtime - a.mtime);
+
+    const raw = await readSafe(join(LOGS_DIR, withMtime[0].name));
     if (!raw) return res.json([]);
 
     const entries = [];

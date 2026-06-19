@@ -3,16 +3,17 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 export function parseStatusline(line) {
   if (!line) return [];
   const members = [];
-  const re = /([🔵🟢🔴⚪])(\d*)\s+([\w-]+):(⚡|💤|❌)\s+(busy|idle|error)(?:\(([^)]*)\))?/gu;
-  let match;
-  while ((match = re.exec(line)) !== null) {
+  const entries = line.split(/\s{2,}/);
+  for (const entry of entries) {
+    const m = entry.match(/^(.+?)\s+([\w-]+):(⚡|💤|❌)\s+(busy|idle|error)(?:\(([^)]*)\))?/u);
+    if (!m) continue;
+    if (!m[2].includes('flash-khalas')) continue;
     members.push({
-      icon: match[1],
-      id: parseInt(match[2] || '0', 10),
-      name: match[3],
-      statusIcon: match[4],
-      status: match[5],
-      elapsed: match[6] || null,
+      icon: m[1],
+      name: m[2],
+      statusIcon: m[3],
+      status: m[4],
+      elapsed: m[5] || null,
     });
   }
   return members;

@@ -12,8 +12,7 @@ describe('parseStatusline', () => {
     const result = parseStatusline(line);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      icon: '🔵',
-      id: 2,
+      icon: '🔵2',
       name: 'flash-khalas-doer',
       statusIcon: '⚡',
       status: 'busy',
@@ -26,8 +25,7 @@ describe('parseStatusline', () => {
     const result = parseStatusline(line);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      icon: '🟢',
-      id: 2,
+      icon: '🟢2',
       name: 'flash-khalas-reviewer',
       statusIcon: '💤',
       status: 'idle',
@@ -43,14 +41,19 @@ describe('parseStatusline', () => {
     expect(result[1].name).toBe('flash-khalas-reviewer');
   });
 
-  it('parses an error status member', () => {
+  it('filters out non-flash-khalas members', () => {
     const line = '🔴3 some-member:❌ error';
+    const result = parseStatusline(line);
+    expect(result).toHaveLength(0);
+  });
+
+  it('parses flash-khalas error status', () => {
+    const line = '🔴3 flash-khalas-doer:❌ error';
     const result = parseStatusline(line);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      icon: '🔴',
-      id: 3,
-      name: 'some-member',
+      icon: '🔴3',
+      name: 'flash-khalas-doer',
       statusIcon: '❌',
       status: 'error',
       elapsed: null,

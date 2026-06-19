@@ -14,8 +14,8 @@ describe('FleetStatus', () => {
 
   it('shows member cards', () => {
     const members = [
-      { icon: '🔵', id: 2, name: 'flash-khalas-doer', statusIcon: '⚡', status: 'busy', elapsed: '02:14' },
-      { icon: '🟢', id: 2, name: 'flash-khalas-reviewer', statusIcon: '💤', status: 'idle', elapsed: null },
+      { icon: '🔵2', name: 'flash-khalas-doer', statusIcon: '⚡', status: 'busy', elapsed: '02:14' },
+      { icon: '🟢2', name: 'flash-khalas-reviewer', statusIcon: '💤', status: 'idle', elapsed: null },
     ];
     render(<FleetStatus members={members} pipelineState={null} />);
     expect(screen.getByText('flash-khalas-doer')).toBeInTheDocument();
