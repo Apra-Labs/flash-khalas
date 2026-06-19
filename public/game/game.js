@@ -206,9 +206,7 @@ let flashTimer = 0;
 let npcs = [];
 let keys = {};
 let frameTick = 0;
-let lives = 3;
-let invincibilityTimer = 0;
-let lostHeartAnim = null;
+
 
 // Combo system (#5)
 let comboCount = 0;
@@ -477,9 +475,6 @@ function startGame() {
   npcTimer = 0;
   playerLane = 1;
   playerX = laneToX(1);
-  lives = 3;
-  invincibilityTimer = 0;
-  lostHeartAnim = null;
   comboCount = 0;
   comboMultiplier = 1;
   lastFlashTime = 0;
@@ -582,20 +577,10 @@ function takeHit() {
     soundCollision();
     return;
   }
-  if (invincibilityTimer > 0) return;
-
-  lives--;
   comboCount = 0;
   comboMultiplier = 1;
   soundCollision();
-
-  if (lives <= 0) {
-    triggerGameOver();
-    return;
-  }
-
-  invincibilityTimer = 120; // 2 seconds at 60fps
-  lostHeartAnim = { index: lives, timer: 20 }; // lives already decremented
+  triggerGameOver();
 }
 
 // --- Update ---
@@ -683,7 +668,6 @@ function update() {
       Math.abs(npc.y - PLAYER_Y) < CAR_H * 0.8
     ) {
       if (turboTimer > 0) continue;
-      if (invincibilityTimer > 0) continue;
       if (shieldActive) {
         shieldActive = false;
         npc.flashed = true;
@@ -693,7 +677,7 @@ function update() {
       }
       takeHit();
       if (state !== 'playing') return;
-      break; // invincibility now active, skip remaining collisions this frame
+      break;
     }
   }
 
@@ -736,11 +720,6 @@ function update() {
   roadBuildings = roadBuildings.filter(b => b.y < canvas.height + 50);
 
   if (flashTimer > 0) flashTimer--;
-  if (invincibilityTimer > 0) invincibilityTimer--;
-  if (lostHeartAnim && lostHeartAnim.timer > 0) {
-    lostHeartAnim.timer--;
-    if (lostHeartAnim.timer <= 0) lostHeartAnim = null;
-  }
 
   updateEngine();
 }
@@ -1072,46 +1051,6 @@ function drawPowerUps() {
   for (const pu of powerUps) drawPowerUp(pu);
 }
 
-// --- Lives hearts ---
-function drawPixelHeart(x, y, color) {
-  const p = 2;
-  ctx.fillStyle = color;
-  ctx.fillRect(x + p, y, p, p);
-  ctx.fillRect(x + 3 * p, y, p, p);
-  ctx.fillRect(x, y + p, 5 * p, 2 * p);
-  ctx.fillRect(x + p, y + 3 * p, 3 * p, p);
-  ctx.fillRect(x + 2 * p, y + 4 * p, p, p);
-}
-
-function drawHearts() {
-  const startX = 10;
-  const startY = 48;
-  const spacing = 18;
-
-  for (let i = 0; i < 3; i++) {
-    const hx = startX + i * spacing;
-    const hy = startY;
-
-    if (lostHeartAnim && lostHeartAnim.index === i && lostHeartAnim.timer > 0) {
-      const t = lostHeartAnim.timer;
-      ctx.save();
-      const cx = hx + 5;
-      const cy = hy + 5;
-      const scale = t > 10 ? 1 + (20 - t) / 10 * 0.5 : 1 + t / 10 * 0.5;
-      ctx.translate(cx, cy);
-      ctx.scale(scale, scale);
-      const frac = t / 20;
-      const r = Math.round(231 * frac + 51 * (1 - frac));
-      const g = Math.round(76 * frac + 51 * (1 - frac));
-      const b = Math.round(60 * frac + 51 * (1 - frac));
-      drawPixelHeart(-5, -5, `rgb(${r},${g},${b})`);
-      ctx.restore();
-    } else {
-      drawPixelHeart(hx, hy, i < lives ? '#e74c3c' : '#333333');
-    }
-  }
-}
-
 // --- HUD (#5, #9) ---
 function drawHUD() {
   ctx.fillStyle = COL.hud;
@@ -1167,7 +1106,6 @@ function drawHUD() {
     ctx.fillText('[SPACE] FLASH!', canvas.width / 2, canvas.height - 10);
   }
 
-  drawHearts();
 }
 
 // --- Turbo edge glow (#9) ---
@@ -1493,9 +1431,7 @@ function gameLoop() {
       drawCarSprite(npc.x, npc.y, npc.type);
     }
 
-    if (invincibilityTimer <= 0 || Math.floor(invincibilityTimer / 6) % 2 === 0) {
-      drawCarSprite(playerX, PLAYER_Y, 'player');
-    }
+    drawCarSprite(playerX, PLAYER_Y, 'player');
     drawFlashEffect();
     drawTurboGlow();
     drawYallaFlash();
