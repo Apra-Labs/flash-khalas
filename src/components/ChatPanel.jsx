@@ -1,31 +1,39 @@
 import { useState } from 'react';
 
-export default function ChatPanel({ onFleetUpdate }) {
+export default function ChatPanel() {
   const [messages, setMessages] = useState([
     { role: 'system', text: 'Yalla! Type a feature request or bug fix to trigger the fleet.' },
   ]);
   const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
 
-  function handleSend() {
-    if (!input.trim()) return;
+  async function handleSend() {
+    if (!input.trim() || sending) return;
 
-    const userMsg = { role: 'user', text: input };
-    setMessages((prev) => [...prev, userMsg]);
-
-    // TODO: Hook into apra-fleet execute_prompt via WebSocket/API
-    const ack = {
-      role: 'system',
-      text: `Fleet dispatched: "${input}". Doer-reviewer loop started...`,
-    };
-    setMessages((prev) => [...prev, ack]);
-
-    onFleetUpdate({
-      message: `Working on: ${input}`,
-      currentStep: 'plan',
-      completedSteps: [],
-    });
-
+    const prompt = input;
+    setMessages((prev) => [...prev, { role: 'user', text: prompt }]);
     setInput('');
+    setSending(true);
+
+    try {
+      const res = await fetch('/api/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json();
+      setMessages((prev) => [
+        ...prev,
+        { role: 'system', text: data.ok ? data.message : `Error: ${data.error}` },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'system', text: 'Failed to reach fleet server.' },
+      ]);
+    } finally {
+      setSending(false);
+    }
   }
 
   function handleKeyDown(e) {
@@ -49,8 +57,11 @@ export default function ChatPanel({ onFleetUpdate }) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Add a power-up system..."
+          disabled={sending}
         />
-        <button onClick={handleSend}>SEND</button>
+        <button onClick={handleSend} disabled={sending}>
+          {sending ? '...' : 'SEND'}
+        </button>
       </div>
     </div>
   );

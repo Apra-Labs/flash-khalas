@@ -1,8 +1,21 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import App from '../src/App';
 
+vi.mock('../src/hooks/useFleetStatus', () => ({
+  default: () => ({ members: [], state: null, featureComplete: false }),
+}));
+
 describe('App', () => {
+  beforeEach(() => {
+    vi.stubGlobal('EventSource', class {
+      onmessage = null;
+      onerror = null;
+      close() {}
+      addEventListener() {}
+    });
+  });
+
   it('renders the header', () => {
     render(<App />);
     expect(screen.getByText('Flash Khalas')).toBeInTheDocument();

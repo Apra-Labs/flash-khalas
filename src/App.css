@@ -53,11 +53,7 @@ body {
   padding: 16px;
 }
 
-.game-section iframe {
-  border: 3px solid #d4a574;
-  border-radius: 4px;
-  width: 100%;
-  height: 100%;
+.game-section .game-frame-wrapper {
   max-width: 500px;
   max-height: 700px;
 }
@@ -189,4 +185,80 @@ body {
 
 .chat-input-area button:hover {
   background: #ffd700;
+}
+
+.fleet-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.member-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 7px;
+  background: #1a1a2e;
+  border: 1px solid #333;
+}
+
+.member-badge.busy {
+  border-color: #ffd700;
+  color: #ffd700;
+}
+
+.member-badge.idle {
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.member-badge.error {
+  border-color: #f44336;
+  color: #f44336;
+}
+
+.member-icon {
+  font-size: 10px;
+}
+
+.member-name {
+  font-weight: bold;
+}
+
+.member-status {
+  opacity: 0.8;
+}
+
+.game-frame-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-frame-wrapper iframe {
+  border: 3px solid #d4a574;
+  border-radius: 4px;
+  width: 100%;
+  height: 100%;
+  max-width: 500px;
+  max-height: 700px;
+}
+
+.reload-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 26, 46, 0.85);
+  color: #ffd700;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  z-index: 10;
 }

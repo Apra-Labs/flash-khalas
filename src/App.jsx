@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import ChatPanel from './components/ChatPanel';
 import GameFrame from './components/GameFrame';
 import FleetStatus from './components/FleetStatus';
+import useFleetStatus from './hooks/useFleetStatus';
 
 export default function App() {
-  const [fleetStatus, setFleetStatus] = useState(null);
+  const { members, state, featureComplete } = useFleetStatus();
 
   return (
     <div className="app-container">
@@ -14,11 +14,11 @@ export default function App() {
       </header>
       <main className="app-main">
         <div className="game-section">
-          <GameFrame />
+          <GameFrame featureComplete={featureComplete} />
         </div>
         <aside className="sidebar">
-          <FleetStatus status={fleetStatus} />
-          <ChatPanel onFleetUpdate={setFleetStatus} />
+          <FleetStatus members={members} pipelineState={state} />
+          <ChatPanel />
         </aside>
       </main>
     </div>
