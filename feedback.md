@@ -2,16 +2,19 @@
 
 **Reviewer:** flash-khalas-reviewer
 **Date:** 2026-06-20
-**Verdict:** CHANGES NEEDED → FIXED (2026-06-20)
+**Verdict:** CHANGES NEEDED → APPROVED (re-review 2026-06-20)
 
-**Fix notes:**
+**Fix notes (from doer):**
 - Bug 1 fixed: `generateQR` now derives `size` from `modules.length` instead of hardcoding 25.
 - Bug 2 fixed: `dataCapacity` changed from 28 → 44 (Version 3-M data codewords).
 - Bug 3 fixed: `rsEncode(codewords, 16)` → `rsEncode(codewords, 26)` (Version 3-M EC codewords).
 - Dead code removed: `addSep` function removed.
 - Think-aloud comments removed (former lines 126-128).
 - Stale header comments updated to reflect actual version/mode used.
-- Canvas size increased to 174×174 (CSS: 100×100) for ~3.4px/module displayed.
+- Canvas size increased to 174×174 (CSS: 100×100) for ~5px/module rendered.
+
+**Re-review verification:**
+All three bugs confirmed fixed. Parameters now consistent: V3 matrix (29×29), 44 data + 26 EC = 70 codewords (V3-M). Renderer derives size from matrix. Dead code and stale comments cleaned up. Build passes, 33/33 tests pass.
 
 ---
 
@@ -118,4 +121,6 @@ No unexpected files. CLAUDE.md not committed.
 
 Issues #32 (tagline) and #33 (open-source CTA) are implemented correctly. The pipeline/server bug fixes are clean.
 
-**Issue #31 (QR code) has a critical encoding bug** — the encoder mixes Version 2 data parameters with a Version 3 matrix, and the renderer clips the matrix to 25×25. The result will render visually as "a QR code" but **will not scan**. This needs to be fixed before merge.
+~~**Issue #31 (QR code) has a critical encoding bug** — the encoder mixes Version 2 data parameters with a Version 3 matrix, and the renderer clips the matrix to 25×25. The result will render visually as "a QR code" but **will not scan**. This needs to be fixed before merge.~~
+
+**Re-review:** All three QR bugs fixed. Encoder now uses consistent V3-M parameters (44 data + 26 EC = 70 codewords), renderer derives size from the matrix, dead code and stale comments removed. Build passes, all 33 tests pass. **Approved.**
