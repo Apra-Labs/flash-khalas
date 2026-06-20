@@ -1,5 +1,6 @@
 import GameFrame from './components/GameFrame';
 import FleetStatus from './components/FleetStatus';
+import BrandingInfo from './components/BrandingInfo';
 import ErrorBoundary from './components/ErrorBoundary';
 import useFleetStatus from './hooks/useFleetStatus';
 
@@ -20,6 +21,7 @@ export default function App() {
           <ErrorBoundary>
             <FleetStatus members={members} />
           </ErrorBoundary>
+          <BrandingInfo />
         </aside>
       </main>
     </div>
