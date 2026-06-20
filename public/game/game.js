@@ -21,6 +21,12 @@ const LIVES_MAX = 3;
 const INVINCIBLE_FRAMES = 120; // 2 seconds at 60fps
 const HEART_LOSS_FRAMES = 30;
 
+// Pre-seeded star positions for night sky (#15)
+const STARS = [];
+for (let i = 0; i < 55; i++) {
+  STARS.push({ x: (i * 157 + 43) % 480, y: (i * 83 + 7) % 118 + 4, r: i % 5 === 0 ? 1.5 : 1, phase: (i * 7) % 30 });
+}
+
 // --- Colors ---
 const COL = {
   sky:       '#0f3460',
@@ -194,6 +200,9 @@ let frameTick = 0;
 let lives = LIVES_MAX;
 let invincibleTimer = 0;
 let heartLossTimer = 0;
+
+// Night mode (#15)
+let nightMode = false;
 
 
 // Combo system (#5)
@@ -493,6 +502,7 @@ function startGame() {
   lives = LIVES_MAX;
   invincibleTimer = 0;
   heartLossTimer = 0;
+  nightMode = false;
 }
 
 function resetGame() {
@@ -617,6 +627,9 @@ function update() {
   }
   if (yallaTimer > 0) yallaTimer--;
   if (yallaFlashTimer > 0) yallaFlashTimer--;
+
+  // Night mode transition at 2000m (#15)
+  if (!nightMode && distance >= 20000) nightMode = true;
 
   // Rush spawns (#8)
   if (distance > 3000) {
@@ -1512,16 +1525,16 @@ function drawYallaPopup() {
 function drawFlashEffect() {
   if (flashTimer <= 0) return;
   ctx.save();
-  ctx.globalAlpha = flashTimer / 15 * 0.3;
+  ctx.globalAlpha = Math.min(1, (flashTimer / 15) * (nightMode ? 0.75 : 0.3));
   ctx.fillStyle = COL.flash;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.restore();
 
-  ctx.fillStyle = COL.flash;
-  const beamW = 20;
+  const beamW = nightMode ? 28 : 20;
   const beamX = playerX + CAR_W / 2 - beamW / 2;
   ctx.save();
-  ctx.globalAlpha = flashTimer / 15 * 0.6;
+  ctx.globalAlpha = Math.min(1, (flashTimer / 15) * (nightMode ? 1.0 : 0.6));
+  ctx.fillStyle = COL.flash;
   ctx.fillRect(beamX, 130, beamW, PLAYER_Y - 130);
   ctx.restore();
 }
@@ -1741,6 +1754,56 @@ function drawLeaderboardOverlay() {
   ctx.fillText('PRESS ANY KEY TO CLOSE', canvas.width / 2, 500);
 }
 
+// --- Night mode draw helpers (#15) ---
+
+function drawStars() {
+  for (const s of STARS) {
+    ctx.globalAlpha = 0.5 + Math.sin(frameTick * 0.05 + s.phase) * 0.4;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawNightOverlay() {
+  if (!nightMode) return;
+  const carCX = playerX + CAR_W / 2;
+  const carFY = PLAYER_Y + 4;
+  const coneLen = 260;
+  const coneHW = 80;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 2, 15, 0.88)';
+  ctx.beginPath();
+  ctx.rect(0, 0, canvas.width, canvas.height);
+  ctx.moveTo(carCX - 10, carFY);
+  ctx.lineTo(carCX + 10, carFY);
+  ctx.lineTo(carCX + coneHW, carFY - coneLen);
+  ctx.lineTo(carCX - coneHW, carFY - coneLen);
+  ctx.closePath();
+  ctx.fill('evenodd');
+  ctx.restore();
+}
+
+function drawNPCHeadlights() {
+  if (!nightMode) return;
+  for (const npc of npcs) {
+    const gx1 = npc.x + 15;
+    const gx2 = npc.x + 33;
+    const gy = npc.y + 6;
+    for (const gx of [gx1, gx2]) {
+      const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, 10);
+      grad.addColorStop(0, 'rgba(255, 240, 160, 0.95)');
+      grad.addColorStop(1, 'rgba(255, 220, 80, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(gx, gy, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
 // ============================================================
 // MAIN LOOP
 // ============================================================
@@ -1763,8 +1826,9 @@ function gameLoop() {
   } else if (state === 'leaderboard') {
     drawLeaderboardOverlay();
   } else {
-    ctx.fillStyle = COL.sky;
+    ctx.fillStyle = nightMode ? '#020a1a' : COL.sky;
     ctx.fillRect(0, 0, canvas.width, 130);
+    if (nightMode) drawStars();
     drawSkyline();
     drawRoad();
     drawSpeedLines();
@@ -1778,6 +1842,8 @@ function gameLoop() {
     if (invincibleTimer <= 0 || frameTick % 8 < 4) {
       drawCarSprite(playerX, PLAYER_Y, 'player');
     }
+    drawNightOverlay();
+    drawNPCHeadlights();
     drawFlashEffect();
     drawTurboGlow();
     drawYallaFlash();
