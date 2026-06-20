@@ -32,8 +32,8 @@ const COL = {
   npc:       '#7f8c8d',
   cop:       '#1a5276',
   patrol:    '#f39c12',
-  gold:      '#ffd700',
-  hud:       '#ffd700',
+  gold:      '#94BA33',
+  hud:       '#94BA33',
   flash:     '#ffffaa',
 };
 
@@ -898,11 +898,11 @@ function drawRoadBuilding(b) {
     ctx.fillRect(cx - 4,  bot - 147,  8, 11);    // tier 4
     ctx.fillStyle = '#0e2244';
     ctx.fillRect(cx - 1,  by,          2, 13);   // spire
-    ctx.fillStyle = '#ffd700';
+    ctx.fillStyle = '#94BA33';
     ctx.fillRect(cx - 1,  by,          2,  3);   // gold needle tip
 
     // Gold accent bands at tier steps
-    ctx.fillStyle = '#8B6914';
+    ctx.fillStyle = '#5a7a1a';
     ctx.fillRect(cx - 13, bot - 97,  26, 2);
     ctx.fillRect(cx - 10, bot - 121, 20, 2);
     ctx.fillRect(cx - 7,  bot - 137, 14, 2);
@@ -958,13 +958,13 @@ function drawRoadBuilding(b) {
     // Helipad platform
     ctx.fillStyle = '#1a3060';
     ctx.fillRect(bx, by, b.w, 8);
-    ctx.strokeStyle = '#ffd700';
+    ctx.strokeStyle = '#94BA33';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.arc(cx, by + 4, 7, 0, Math.PI * 2);
     ctx.stroke();
     // H marking
-    ctx.fillStyle = '#ffd700';
+    ctx.fillStyle = '#94BA33';
     ctx.fillRect(cx - 4, by + 1, 2, 6);
     ctx.fillRect(cx + 2, by + 1, 2, 6);
     ctx.fillRect(cx - 4, by + 3, 8, 2);
@@ -983,7 +983,7 @@ function drawRoadBuilding(b) {
     // Meme: tiny luxury yacht below
     ctx.fillStyle = '#fff';
     ctx.fillRect(bx - 14, bot - 10, 12, 5);
-    ctx.fillStyle = '#ffd700';
+    ctx.fillStyle = '#94BA33';
     ctx.fillRect(bx - 9, bot - 16,  1,  6);
     ctx.beginPath();
     ctx.moveTo(bx - 9, bot - 16);
@@ -995,7 +995,7 @@ function drawRoadBuilding(b) {
   } else if (b.name === 'dubaiFrame') {
     // Giant gold picture frame — two towers + sky bridge
     const colW = 5;
-    const gold = '#8B6914';
+    const gold = '#5a7a1a';
 
     ctx.fillStyle = gold;
     ctx.fillRect(bx,            by, colW,  b.h);     // left column
@@ -1019,12 +1019,12 @@ function drawRoadBuilding(b) {
     ctx.fillRect(bx + b.w - colW - 7, by + b.h - 22, 3, 14);
 
     // Gold accent lines
-    ctx.fillStyle = '#ffd700';
+    ctx.fillStyle = '#94BA33';
     ctx.fillRect(bx + 1, by + 1, b.w - 2, 2);
     ctx.fillRect(bx + 1, by + b.h - 3, b.w - 2, 2);
 
     // Column rivet detail
-    ctx.fillStyle = '#6a4c0a';
+    ctx.fillStyle = '#3a5a0a';
     for (let wy = by + 12; wy < by + b.h - 8; wy += 12) {
       ctx.fillRect(bx, wy, colW, 2);
       ctx.fillRect(bx + b.w - colW, wy, colW, 2);
@@ -1053,7 +1053,7 @@ function drawRoadBuilding(b) {
     }
 
     // Gold twist stripe running up the building
-    ctx.strokeStyle = '#8B6914';
+    ctx.strokeStyle = '#5a7a1a';
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let i = 0; i <= numFloors; i++) {
@@ -1092,14 +1092,14 @@ function drawRoadBuilding(b) {
     ctx.fill();
 
     // Gold outer rim
-    ctx.strokeStyle = '#8B6914';
+    ctx.strokeStyle = '#5a7a1a';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.ellipse(mcx, mcy, rx - 1, ry - 1, 0, 0, Math.PI * 2);
     ctx.stroke();
 
     // Calligraphy suggestion — gold lines in the ring band
-    ctx.strokeStyle = '#ffd700';
+    ctx.strokeStyle = '#94BA33';
     ctx.lineWidth = 1;
     for (let row = 0; row < 3; row++) {
       const gy = mcy - ry * 0.25 + row * ry * 0.25;
