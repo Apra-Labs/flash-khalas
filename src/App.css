@@ -4,8 +4,8 @@
   --bg-panel: #16213e;
   --bg-deep: #0d0d1a;
   --bg-deepest: #0a0a14;
-  --accent-copper: #d4a574;
-  --accent-gold: #ffd700;
+  --accent-copper: #94BA33;
+  --accent-gold: #b8d94d;
   --color-success: #4caf50;
   --color-error: #f44336;
   --color-warning: #ff9800;
@@ -70,7 +70,7 @@ body {
 .app-header h1 {
   font-size: 18px;
   color: var(--accent-gold);
-  text-shadow: 0 0 12px rgba(255, 215, 0, 0.45), 2px 2px 0 #c4956a;
+  text-shadow: 0 0 12px rgba(148, 186, 51, 0.45), 2px 2px 0 #5a7a1a;
 }
 
 .app-header .subtitle {
@@ -179,7 +179,7 @@ body {
 }
 
 .member-card.busy {
-  border-color: rgba(255, 215, 0, 0.55);
+  border-color: rgba(148, 186, 51, 0.55);
   animation: pulse-busy 1.5s ease-in-out infinite;
 }
 
@@ -201,8 +201,8 @@ body {
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.5); }
-  50% { opacity: 0.5; box-shadow: 0 0 6px 3px rgba(255, 215, 0, 0.2); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(148, 186, 51, 0.5); }
+  50% { opacity: 0.5; box-shadow: 0 0 6px 3px rgba(148, 186, 51, 0.2); }
 }
 
 .member-card-name {
@@ -232,8 +232,8 @@ body {
 .member-card.idle .member-card-badge { color: var(--color-success); }
 
 @keyframes pulse-busy {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
-  50% { box-shadow: 0 0 10px 3px rgba(255, 215, 0, 0.25); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(148, 186, 51, 0); }
+  50% { box-shadow: 0 0 10px 3px rgba(148, 186, 51, 0.25); }
 }
 
 /* ─── Run History ─── */
@@ -357,13 +357,13 @@ body {
   background: rgba(22, 33, 62, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(212, 165, 116, 0.4);
+  border: 1px solid rgba(148, 186, 51, 0.4);
   border-radius: var(--radius);
   width: 100%;
   max-width: 640px;
   max-height: 85vh;
   overflow-y: auto;
-  box-shadow: 0 16px 56px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 215, 0, 0.08);
+  box-shadow: 0 16px 56px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(148, 186, 51, 0.08);
 }
 
 .fleet-modal::-webkit-scrollbar { width: 6px; }
@@ -550,7 +550,7 @@ body {
 
 @keyframes pulse-task {
   0%, 100% { background: var(--bg-primary); }
-  50% { background: #2a2520; }
+  50% { background: #1a2210; }
 }
 
 .task-icon {
