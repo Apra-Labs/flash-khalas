@@ -1,75 +1,112 @@
-# Apra Labs Rebrand — Code Review
+# Branding Info Section — Code Review
 
 **Reviewer:** flash-khalas-reviewer
 **Date:** 2026-06-20
-**Verdict:** APPROVED
+**Verdict:** CHANGES NEEDED
 
 ---
 
-## CSS Variables & References
+## #31 — QR Code (Pure JS/Canvas)
 
-All copper/gold CSS values correctly updated to green palette:
+**Result: Broken — QR will not scan.**
 
-| Token | Old Value | New Value | Status |
-|---|---|---|---|
-| `--accent-copper` | `#d4a574` | `#94BA33` | ✓ |
-| `--accent-gold` | `#ffd700` | `#b8d94d` | ✓ |
-| `rgba(255, 215, 0, …)` (×6 sites) | gold rgba | `rgba(148, 186, 51, …)` | ✓ |
-| `rgba(212, 165, 116, 0.4)` | copper rgba | `rgba(148, 186, 51, 0.4)` | ✓ |
-| `#c4956a` text-shadow | copper shadow | `#5a7a1a` | ✓ |
-| `#2a2520` pulse-task bg | warm dark | `#1a2210` | ✓ |
+Three compounding bugs in `BrandingInfo.jsx`:
 
-Contrast against `#0a0a14` / `#0d0d1a` dark backgrounds looks strong.
+### Bug 1: Matrix size vs. render size mismatch
+`qrEncode()` builds a **29×29** matrix (Version 3, line 49: `size = 17 + 4 * 3`), but `generateQR()` renders only **25×25** modules (line 18: `const size = 25`). The bottom 4 rows and right 4 columns are silently clipped.
 
-**Issue:** Variable names `--accent-copper` and `--accent-gold` still reference the old palette but now hold green values. Rename to `--accent-primary` / `--accent-secondary` (or `--accent-green` / `--accent-green-light`) so future readers aren't misled.
+### Bug 2: Wrong data/ECC parameters for Version 3
+`dataCapacity = 28` and `ecCount = 16` (lines 73, 85) total 44 codewords — correct for **Version 2-M**, not Version 3-M which requires 44 data + 26 EC = 70 codewords. The format info declares ECC Level M, but the RS encoding doesn't match.
 
-**Doer:** fixed in commit cdc73d0 — renamed `--accent-copper` → `--accent-primary` and `--accent-gold` → `--accent-highlight` in the `:root` declaration; updated all `var(--accent-copper)` / `var(--accent-gold)` references throughout App.css.
+### Bug 3: URL doesn't fit V2-M capacity
+The URL `https://apralabs.com/apra-fleet` (30 chars) needs 32 data codewords in byte mode (4-bit mode + 8-bit count + 240-bit data + 4-bit terminator = 256 bits). V2-M only supports 28 data codewords. The padding loop at line 80 never triggers because `codewords.length` (32) already exceeds `dataCapacity` (28), so the RS encoding receives mismatched input.
 
-## Game Canvas Colors
+### Minor issues
+- Stale comments: file header (line 3) says "Version 2", section comment (line 36) says "ECC L, alphanumeric", actual code uses Version 3, ECC M, byte mode.
+- `addSep()` function (line 109) is defined but never called — dead code.
+- Think-aloud comments left in source (lines 126-128): `"wait, version 3 has alignment..."` — should be removed.
 
-Gold-family colors in `game.js` correctly replaced:
+### Fix recommendation
+Either use a hardcoded pre-computed 25×25 module matrix (simplest — the file header comments already allude to this approach), or fix the encoder to use consistent V3-M parameters: `dataCapacity = 44`, `ecCount = 26`, and set `size = 29` in both `qrEncode` and `generateQR`.
 
-| Old Hex | New Hex | Usage | Status |
-|---|---|---|---|
-| `#ffd700` (×7 inline + COL) | `#94BA33` | COL.gold, COL.hud, Burj needle, helipad, frame accents, museum ring, yacht mast | ✓ |
-| `#8B6914` (×4 sites) | `#5a7a1a` | Burj accent bands, Dubai Frame columns, Cayan twist, museum rim | ✓ |
-| `#6a4c0a` (×1 site) | `#3a5a0a` | Frame column rivets | ✓ |
+---
 
-Non-gold colors left untouched (verified): `sky`, `sand`, `road`, `lane`, `player`, `playerAcc`, `npc`, `cop`, `patrol`, `flash`. Correct.
+## #32 — "We are not a gaming company" tagline
 
-**Issue:** Camel body `#c8a450` → `#94BA33` and legs `#b89040` → `#7a9e28` turns the camel green. The camel is a desert environmental sprite, not a branding accent — a green camel reads as a blind find-replace, not an intentional design choice. Revert camel body and leg colors to their originals (`#c8a450`, `#b89040`).
+**Result: Present and correct.**
 
-**Doer:** fixed in commit cdc73d0 — reverted camel body and tail to `#c8a450` and legs to `#b89040` in public/game/game.js.
+- Rendered as italic monospace with a subtle green glow animation (`tagline-glow` keyframes).
+- Uses `--accent-highlight` and `rgba(184, 217, 77, ...)` — consistent with Apra Labs green palette.
+- Centered, visually cohesive with the rest of the sidebar.
 
-## Completeness Check
+No issues.
 
-- Grep for `#ffd700`, `#8B6914`, `#b89040`, `#6a4c0a`, `rgba(255, 215, 0`: **zero hits** in changed files.
-- One remaining `#d4a574`: `COL.sand` in `game.js` line 27. Used for desert terrain fill (line 837) and subtitle text (line 1581) — environmental, correctly left unchanged.
-- `requirements.md` referenced in CLAUDE.md but does not exist on either branch. No impact on diff review, but consider adding it for traceability.
-- `npm run build`: passed
-- `npm test`: 33/33 tests passed across 5 suites
+---
+
+## #33 — "Apra Fleet is Open Source" + star-the-repo CTA
+
+**Result: Present and correct.**
+
+- Heading uses `--accent-primary` with uppercase tracking.
+- Star link opens `https://github.com/ApraPipes/apra-fleet` with `target="_blank"` and `rel="noopener noreferrer"`.
+- Hover state uses green background tint. Border uses `rgba(148, 186, 51, 0.4)`.
+- Layout is flexbox with `space-between` — heading left, CTA right.
+
+No issues.
+
+---
+
+## Styles (App.css)
+
+- All new classes are namespaced under `.branding-` — clean, no collisions.
+- Colors use CSS variables (`--accent-highlight`, `--accent-primary`, `--text-muted`) and Apra green rgba values.
+- Background (`rgba(10, 10, 20, 0.5)`) matches the dark theme.
+- `image-rendering: pixelated` on the QR canvas is a good touch for crisp module edges.
+- `flex-shrink: 0` prevents the branding section from collapsing.
+
+No issues.
+
+---
+
+## Pipeline / Server Bug Fixes
+
+### `lib/pipeline.js`
+Adds `prompt_full` message handling to capture untruncated prompts during pipeline parsing. Clean, matches the existing pattern.
+
+### `scripts/backfill-dispatches.js`
+Refactored from single-pass (post each entry immediately) to two-pass (collect into a Map by invocation ID, resolve `prompt_full` entries, then POST). Correct — fixes the truncated-prompt bug.
+
+### `server.js`
+Adds `Set`-based dedup in `autoRecordDispatches` keyed on `member|ts` to prevent duplicate dispatch records. The `Set` check runs before the more expensive `matchesDispatch` loop — good ordering.
+
+No issues with these fixes.
+
+---
+
+## Build & Tests
+
+- `npm run build`: passes, no warnings.
+- `npm test`: all 33 tests pass. Stderr shows jsdom canvas warnings (expected — jsdom doesn't implement Canvas natively, and the component gracefully returns early via `if (!ctx) return`).
+
+---
 
 ## File Hygiene
 
-Changed files in commit `91ad25a`:
-- `src/App.css` — expected ✓
-- `public/game/game.js` — expected ✓
+| File | Expected? |
+|---|---|
+| `src/components/BrandingInfo.jsx` (new) | Yes |
+| `src/App.jsx` | Yes |
+| `src/App.css` | Yes |
+| `lib/pipeline.js` | Yes (bug fix) |
+| `scripts/backfill-dispatches.js` | Yes (bug fix) |
+| `server.js` | Yes (bug fix) |
 
-No unexpected files modified. `CLAUDE.md` is in `.gitignore` (line 8) and not committed. `.claude/CLAUDE.md` is tracked project documentation, not review context.
-
----
-
-## Re-review (2026-06-20)
-
-Both issues from the initial review have been addressed in commit `cdc73d0`:
-
-1. **CSS variable names** — `--accent-copper` → `--accent-primary`, `--accent-gold` → `--accent-highlight`. All 28 `var()` references updated throughout App.css. Zero remaining `accent-copper` or `accent-gold` references. ✓
-2. **Camel colors** — body/tail reverted to `#c8a450`, legs reverted to `#b89040`. Camel is tan/golden again. ✓
-
-Build passes. All 33 tests pass. No regressions.
+No unexpected files. CLAUDE.md not committed.
 
 ---
 
 ## Summary
 
-The rebrand is clean and complete. Every copper/gold accent in both the React wrapper CSS and the game canvas has been mapped to a coherent Apra Labs green palette. CSS variable names now reflect the new identity. Environmental colors (sand, camel, terrain) are correctly preserved. **Approved as-is.**
+Issues #32 (tagline) and #33 (open-source CTA) are implemented correctly. The pipeline/server bug fixes are clean.
+
+**Issue #31 (QR code) has a critical encoding bug** — the encoder mixes Version 2 data parameters with a Version 3 matrix, and the renderer clips the matrix to 25×25. The result will render visually as "a QR code" but **will not scan**. This needs to be fixed before merge.
