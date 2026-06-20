@@ -20,6 +20,7 @@ const HAS_TOUCH = 'ontouchstart' in window;
 const LIVES_MAX = 3;
 const INVINCIBLE_FRAMES = 120; // 2 seconds at 60fps
 const HEART_LOSS_FRAMES = 30;
+const NIGHT_DISTANCE = 20000; // trigger night mode at 2000m
 
 // --- Colors ---
 const COL = {
@@ -194,6 +195,11 @@ let frameTick = 0;
 let lives = LIVES_MAX;
 let invincibleTimer = 0;
 let heartLossTimer = 0;
+
+// Night mode state (#15)
+let nightMode = false;
+let nightTransitionProgress = 0;
+let stars = [];
 
 
 // Combo system (#5)
@@ -493,6 +499,8 @@ function startGame() {
   lives = LIVES_MAX;
   invincibleTimer = 0;
   heartLossTimer = 0;
+  nightMode = false;
+  nightTransitionProgress = 0;
 }
 
 function resetGame() {
@@ -724,6 +732,12 @@ function update() {
   if (flashTimer > 0) flashTimer--;
   if (invincibleTimer > 0) invincibleTimer--;
   if (heartLossTimer > 0) heartLossTimer--;
+
+  // Night mode after 2000m (#15)
+  if (distance >= NIGHT_DISTANCE && !nightMode) nightMode = true;
+  if (nightMode && nightTransitionProgress < 1) {
+    nightTransitionProgress = Math.min(nightTransitionProgress + 0.003, 1);
+  }
 
   updateEngine();
 }
@@ -1511,18 +1525,87 @@ function drawYallaPopup() {
 
 function drawFlashEffect() {
   if (flashTimer <= 0) return;
+  const nightBoost = nightMode ? 1.8 : 1;
   ctx.save();
-  ctx.globalAlpha = flashTimer / 15 * 0.3;
+  ctx.globalAlpha = Math.min(flashTimer / 15 * 0.3 * nightBoost, 1);
   ctx.fillStyle = COL.flash;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.restore();
 
-  ctx.fillStyle = COL.flash;
-  const beamW = 20;
+  const beamW = nightMode ? 30 : 20;
   const beamX = playerX + CAR_W / 2 - beamW / 2;
   ctx.save();
-  ctx.globalAlpha = flashTimer / 15 * 0.6;
+  ctx.globalAlpha = Math.min(flashTimer / 15 * 0.6 * nightBoost, 1);
+  ctx.fillStyle = COL.flash;
   ctx.fillRect(beamX, 130, beamW, PLAYER_Y - 130);
+  ctx.restore();
+}
+
+// Night mode: stars in the sky (#15)
+function drawStars() {
+  ctx.save();
+  for (const star of stars) {
+    const twinkle = 0.6 + Math.sin(frameTick * 0.07 + star.phase) * 0.4;
+    ctx.globalAlpha = nightTransitionProgress * twinkle;
+    ctx.fillStyle = '#fffff0';
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Night mode: dark road overlay + headlight cone (#15)
+function drawNightOverlay() {
+  if (nightTransitionProgress <= 0) return;
+  const alpha = nightTransitionProgress;
+  // Dark overlay on road area
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.78;
+  ctx.fillStyle = '#00000a';
+  ctx.fillRect(0, 130, canvas.width, canvas.height - 130);
+  ctx.restore();
+  // Headlight cone using additive blending
+  const carCenterX = playerX + CAR_W / 2;
+  const carFrontY = PLAYER_Y;
+  const coneLen = 280;
+  const coneHalfW = 100;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const gr = ctx.createRadialGradient(carCenterX, carFrontY, 0, carCenterX, carFrontY, coneLen);
+  gr.addColorStop(0, `rgba(220, 200, 120, ${0.6 * alpha})`);
+  gr.addColorStop(0.35, `rgba(160, 140, 60, ${0.28 * alpha})`);
+  gr.addColorStop(0.75, `rgba(60, 50, 10, ${0.08 * alpha})`);
+  gr.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath();
+  ctx.moveTo(carCenterX, carFrontY + 5);
+  ctx.lineTo(carCenterX - coneHalfW, carFrontY - coneLen);
+  ctx.lineTo(carCenterX + coneHalfW, carFrontY - coneLen);
+  ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = gr;
+  ctx.fillRect(carCenterX - coneHalfW - 10, carFrontY - coneLen - 10, (coneHalfW + 10) * 2, coneLen + 20);
+  ctx.restore();
+}
+
+// Night mode: NPC headlight dots visible in the dark (#15)
+function drawNPCHeadlights() {
+  if (nightTransitionProgress <= 0) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const npc of npcs) {
+    const hy = npc.y + 4;
+    const hx1 = npc.x + 13;
+    const hx2 = npc.x + 31;
+    ctx.globalAlpha = nightTransitionProgress * 0.35;
+    ctx.fillStyle = '#ffff80';
+    ctx.beginPath(); ctx.arc(hx1, hy, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx2, hy, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = nightTransitionProgress * 0.9;
+    ctx.fillStyle = '#ffffcc';
+    ctx.beginPath(); ctx.arc(hx1, hy, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx2, hy, 3, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -1763,8 +1846,17 @@ function gameLoop() {
   } else if (state === 'leaderboard') {
     drawLeaderboardOverlay();
   } else {
-    ctx.fillStyle = COL.sky;
+    if (nightTransitionProgress > 0) {
+      const t = nightTransitionProgress;
+      const r = Math.round(15 * (1 - t) + 1 * t);
+      const g = Math.round(52 * (1 - t) + 11 * t);
+      const b = Math.round(96 * (1 - t) + 26 * t);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+    } else {
+      ctx.fillStyle = COL.sky;
+    }
     ctx.fillRect(0, 0, canvas.width, 130);
+    if (nightTransitionProgress > 0) drawStars();
     drawSkyline();
     drawRoad();
     drawSpeedLines();
@@ -1778,6 +1870,8 @@ function gameLoop() {
     if (invincibleTimer <= 0 || frameTick % 8 < 4) {
       drawCarSprite(playerX, PLAYER_Y, 'player');
     }
+    drawNightOverlay();
+    drawNPCHeadlights();
     drawFlashEffect();
     drawTurboGlow();
     drawYallaFlash();
@@ -1794,5 +1888,17 @@ function gameLoop() {
 
   requestAnimationFrame(gameLoop);
 }
+
+// Pre-generate star positions for night sky (#15)
+(function generateStars() {
+  for (let i = 0; i < 70; i++) {
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: 5 + Math.random() * 110,
+      r: Math.random() < 0.15 ? 1.5 : 0.7,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+})();
 
 gameLoop();
