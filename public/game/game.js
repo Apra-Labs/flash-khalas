@@ -57,6 +57,13 @@ const MILESTONE_MSGS = {
 };
 const MILESTONE_SPEEDS = Object.keys(MILESTONE_MSGS).map(Number);
 
+// Static star positions for night sky (#15)
+const STARS = Array.from({length: 60}, (_, i) => ({
+  x: ((i * 137 + 83) % 460) + 10,
+  y: ((i * 97 + 41) % 100) + 5,
+  r: (i % 3) === 0 ? 1.5 : 1,
+}));
+
 // --- Audio system (#6) ---
 let audioCtx = null;
 let audioMuted = (() => { try { return JSON.parse(localStorage.getItem('fk_muted') || 'false'); } catch { return false; } })();
@@ -195,6 +202,9 @@ let lives = LIVES_MAX;
 let invincibleTimer = 0;
 let heartLossTimer = 0;
 
+// Night mode (#15)
+let nightMode = false;
+let nightModeAlpha = 0;
 
 // Combo system (#5)
 let comboCount = 0;
@@ -493,6 +503,8 @@ function startGame() {
   lives = LIVES_MAX;
   invincibleTimer = 0;
   heartLossTimer = 0;
+  nightMode = false;
+  nightModeAlpha = 0;
 }
 
 function resetGame() {
@@ -724,6 +736,10 @@ function update() {
   if (flashTimer > 0) flashTimer--;
   if (invincibleTimer > 0) invincibleTimer--;
   if (heartLossTimer > 0) heartLossTimer--;
+
+  // Night mode transition at 2000m (#15)
+  if (distance >= 20000 && !nightMode) nightMode = true;
+  if (nightMode && nightModeAlpha < 1) nightModeAlpha = Math.min(nightModeAlpha + 0.005, 1);
 
   updateEngine();
 }
@@ -1511,17 +1527,18 @@ function drawYallaPopup() {
 
 function drawFlashEffect() {
   if (flashTimer <= 0) return;
+  const nightMult = 1 + nightModeAlpha * 1.5;
   ctx.save();
-  ctx.globalAlpha = flashTimer / 15 * 0.3;
+  ctx.globalAlpha = Math.min(1, flashTimer / 15 * 0.3 * nightMult);
   ctx.fillStyle = COL.flash;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.restore();
 
   ctx.fillStyle = COL.flash;
-  const beamW = 20;
+  const beamW = nightModeAlpha > 0 ? 30 : 20;
   const beamX = playerX + CAR_W / 2 - beamW / 2;
   ctx.save();
-  ctx.globalAlpha = flashTimer / 15 * 0.6;
+  ctx.globalAlpha = Math.min(1, flashTimer / 15 * 0.6 * nightMult);
   ctx.fillRect(beamX, 130, beamW, PLAYER_Y - 130);
   ctx.restore();
 }
@@ -1741,6 +1758,96 @@ function drawLeaderboardOverlay() {
   ctx.fillText('PRESS ANY KEY TO CLOSE', canvas.width / 2, 500);
 }
 
+// --- Stars for night sky (#15) ---
+function drawStars() {
+  ctx.save();
+  for (const s of STARS) {
+    const twinkle = 0.7 + 0.3 * Math.sin(frameTick * 0.05 + s.x * 0.1);
+    ctx.globalAlpha = nightModeAlpha * twinkle;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// --- Night overlay: dark canvas + headlight cone (#15) ---
+function drawNightOverlay() {
+  if (nightModeAlpha === 0) return;
+
+  const cx = playerX + CAR_W / 2;
+  const frontY = PLAYER_Y + 8;
+  const topY = 132;
+  const spread = 110;
+
+  ctx.save();
+  // Dark overlay everywhere except the headlight cone (even-odd fill)
+  ctx.fillStyle = `rgba(0,0,0,${nightModeAlpha * 0.85})`;
+  ctx.beginPath();
+  ctx.rect(0, 0, canvas.width, canvas.height);
+  // Cone cutout (wound opposite to rect so even-odd cuts it out)
+  ctx.moveTo(cx - 4, frontY);
+  ctx.lineTo(cx + 4, frontY);
+  ctx.lineTo(cx + spread, topY);
+  ctx.lineTo(cx - spread, topY);
+  ctx.closePath();
+  ctx.fill('evenodd');
+
+  // Warm headlight gradient inside the cone
+  ctx.beginPath();
+  ctx.moveTo(cx - 4, frontY);
+  ctx.lineTo(cx - spread, topY);
+  ctx.lineTo(cx + spread, topY);
+  ctx.lineTo(cx + 4, frontY);
+  ctx.closePath();
+  ctx.clip();
+
+  const grad = ctx.createLinearGradient(cx, frontY, cx, topY);
+  grad.addColorStop(0, `rgba(255,255,200,${nightModeAlpha * 0.45})`);
+  grad.addColorStop(0.6, `rgba(255,255,150,${nightModeAlpha * 0.15})`);
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.restore();
+}
+
+// --- NPC headlights visible through night darkness (#15) ---
+function drawNpcHeadlights() {
+  if (nightModeAlpha === 0) return;
+  ctx.save();
+  for (const npc of npcs) {
+    const x = npc.x;
+    const y = npc.y;
+    const headY = npc.type === 'patrol' ? y + 4 : y + 6;
+    const tailY = y + CAR_H - 8;
+
+    // Headlight glow (front of NPC)
+    ctx.globalAlpha = nightModeAlpha * 0.2;
+    ctx.fillStyle = '#ffffdd';
+    ctx.beginPath(); ctx.arc(x + 15, headY, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 33, headY, 7, 0, Math.PI * 2); ctx.fill();
+
+    ctx.globalAlpha = nightModeAlpha * 0.9;
+    ctx.fillStyle = '#ffffaa';
+    ctx.beginPath(); ctx.arc(x + 15, headY, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 33, headY, 2.5, 0, Math.PI * 2); ctx.fill();
+
+    // Taillight glow (rear of NPC, facing player)
+    ctx.globalAlpha = nightModeAlpha * 0.25;
+    ctx.fillStyle = '#ff4444';
+    ctx.beginPath(); ctx.arc(x + 14, tailY, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 32, tailY, 6, 0, Math.PI * 2); ctx.fill();
+
+    ctx.globalAlpha = nightModeAlpha * 0.9;
+    ctx.fillStyle = '#ff2222';
+    ctx.beginPath(); ctx.arc(x + 14, tailY, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 32, tailY, 2.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
 // ============================================================
 // MAIN LOOP
 // ============================================================
@@ -1763,9 +1870,18 @@ function gameLoop() {
   } else if (state === 'leaderboard') {
     drawLeaderboardOverlay();
   } else {
-    ctx.fillStyle = COL.sky;
+    // Sky: interpolate from day (#0f3460) to night (#010818) as nightModeAlpha grows
+    if (nightModeAlpha > 0) {
+      const r = Math.round(15 + (1 - 15) * nightModeAlpha);
+      const g = Math.round(52 + (8 - 52) * nightModeAlpha);
+      const b = Math.round(96 + (24 - 96) * nightModeAlpha);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+    } else {
+      ctx.fillStyle = COL.sky;
+    }
     ctx.fillRect(0, 0, canvas.width, 130);
     drawSkyline();
+    if (nightModeAlpha > 0) drawStars();
     drawRoad();
     drawSpeedLines();
     drawRoadBuildings();
@@ -1774,6 +1890,10 @@ function gameLoop() {
     for (const npc of npcs) {
       drawCarSprite(npc.x, npc.y, npc.type);
     }
+
+    // Night overlay before player car so player is always visible on top
+    drawNightOverlay();
+    drawNpcHeadlights();
 
     if (invincibleTimer <= 0 || frameTick % 8 < 4) {
       drawCarSprite(playerX, PLAYER_Y, 'player');
