@@ -1128,7 +1128,7 @@ function drawRoadBuilding(b) {
 
   } else if (b.name === 'camel') {
     // Pixel-art camel strutting through the desert — meme energy
-    ctx.fillStyle = '#94BA33';
+    ctx.fillStyle = '#c8a450';
     // Body
     ctx.fillRect(bx + 2, by + 8, 18, 8);
     // Hump
@@ -1144,13 +1144,13 @@ function drawRoadBuilding(b) {
     ctx.fillStyle = '#222';
     ctx.fillRect(bx + 22, by + 3, 1, 1);
     // Legs (4)
-    ctx.fillStyle = '#7a9e28';
+    ctx.fillStyle = '#b89040';
     ctx.fillRect(bx + 4,  by + 15, 2, 5);
     ctx.fillRect(bx + 9,  by + 15, 2, 5);
     ctx.fillRect(bx + 14, by + 15, 2, 5);
     ctx.fillRect(bx + 18, by + 15, 2, 5);
     // Tail
-    ctx.fillStyle = '#94BA33';
+    ctx.fillStyle = '#c8a450';
     ctx.fillRect(bx,      by + 9,  3, 2);
     ctx.fillRect(bx,      by + 11, 2, 2);
 
