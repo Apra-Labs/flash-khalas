@@ -23,6 +23,8 @@ Contrast against `#0a0a14` / `#0d0d1a` dark backgrounds looks strong.
 
 **Issue:** Variable names `--accent-copper` and `--accent-gold` still reference the old palette but now hold green values. Rename to `--accent-primary` / `--accent-secondary` (or `--accent-green` / `--accent-green-light`) so future readers aren't misled.
 
+**Doer:** fixed in commit cdc73d0 — renamed `--accent-copper` → `--accent-primary` and `--accent-gold` → `--accent-highlight` in the `:root` declaration; updated all `var(--accent-copper)` / `var(--accent-gold)` references throughout App.css.
+
 ## Game Canvas Colors
 
 Gold-family colors in `game.js` correctly replaced:
@@ -36,6 +38,8 @@ Gold-family colors in `game.js` correctly replaced:
 Non-gold colors left untouched (verified): `sky`, `sand`, `road`, `lane`, `player`, `playerAcc`, `npc`, `cop`, `patrol`, `flash`. Correct.
 
 **Issue:** Camel body `#c8a450` → `#94BA33` and legs `#b89040` → `#7a9e28` turns the camel green. The camel is a desert environmental sprite, not a branding accent — a green camel reads as a blind find-replace, not an intentional design choice. Revert camel body and leg colors to their originals (`#c8a450`, `#b89040`).
+
+**Doer:** fixed in commit cdc73d0 — reverted camel body and tail to `#c8a450` and legs to `#b89040` in public/game/game.js.
 
 ## Completeness Check
 
