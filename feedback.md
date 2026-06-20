@@ -1,126 +1,113 @@
-# Branding Info Section — Code Review
+# Flash Khallas — Code Review
 
 **Reviewer:** flash-khalas-reviewer
 **Date:** 2026-06-20
-**Verdict:** CHANGES NEEDED → APPROVED (re-review 2026-06-20)
-
-**Fix notes (from doer):**
-- Bug 1 fixed: `generateQR` now derives `size` from `modules.length` instead of hardcoding 25.
-- Bug 2 fixed: `dataCapacity` changed from 28 → 44 (Version 3-M data codewords).
-- Bug 3 fixed: `rsEncode(codewords, 16)` → `rsEncode(codewords, 26)` (Version 3-M EC codewords).
-- Dead code removed: `addSep` function removed.
-- Think-aloud comments removed (former lines 126-128).
-- Stale header comments updated to reflect actual version/mode used.
-- Canvas size increased to 174×174 (CSS: 100×100) for ~5px/module rendered.
-
-**Re-review verification:**
-All three bugs confirmed fixed. Parameters now consistent: V3 matrix (29×29), 44 data + 26 EC = 70 codewords (V3-M). Renderer derives size from matrix. Dead code and stale comments cleaned up. Build passes, 33/33 tests pass.
+**Verdict:** CHANGES NEEDED
 
 ---
 
-## #31 — QR Code (Pure JS/Canvas)
+## Rename Check (#36)
 
-**Result: Broken — QR will not scan.**
+**Result: Nearly complete — one miss in package-lock.json.**
 
-Three compounding bugs in `BrandingInfo.jsx`:
+All source files correctly renamed `khalas` → `khallas`:
+- `package.json` name: `flash-khallas` ✓
+- `index.html` title: `Flash Khallas` ✓
+- `public/game/index.html` title: `Flash Khallas` ✓
+- `public/game/game.js`: milestone text, title screen, game over — all `KHALLAS` ✓
+- `src/App.jsx` header: `Flash Khallas` ✓
+- `src/components/GameFrame.jsx` iframe title: `Flash Khallas Game` ✓
+- `src/components/FleetStatus.jsx` member name prefix: `flash-khallas-` ✓
+- `src/hooks/useFleetStatus.js` filter: `flash-khallas` ✓
+- `lib/pipeline.js` filter: `flash-khallas` ✓
+- `scripts/backfill-dispatches.js` filter + comment: `flash-khallas` ✓
+- `server.js` file paths: `flash-khallas-request.json`, `flash-khallas-dispatches.jsonl` ✓
+- `README.md`: all references updated ✓
+- All test files: member names updated ✓
 
-### Bug 1: Matrix size vs. render size mismatch
-`qrEncode()` builds a **29×29** matrix (Version 3, line 49: `size = 17 + 4 * 3`), but `generateQR()` renders only **25×25** modules (line 18: `const size = 25`). The bottom 4 rows and right 4 columns are silently clipped.
+Grep for old spelling `khalas` (case-insensitive, excluding `khallas`) across source files: **zero hits**.
 
-### Bug 2: Wrong data/ECC parameters for Version 3
-`dataCapacity = 28` and `ecCount = 16` (lines 73, 85) total 44 codewords — correct for **Version 2-M**, not Version 3-M which requires 44 data + 26 EC = 70 codewords. The format info declares ECC Level M, but the RS encoding doesn't match.
-
-### Bug 3: URL doesn't fit V2-M capacity
-The URL `https://apralabs.com/apra-fleet` (30 chars) needs 32 data codewords in byte mode (4-bit mode + 8-bit count + 240-bit data + 4-bit terminator = 256 bits). V2-M only supports 28 data codewords. The padding loop at line 80 never triggers because `codewords.length` (32) already exceeds `dataCapacity` (28), so the RS encoding receives mismatched input.
-
-### Minor issues
-- Stale comments: file header (line 3) says "Version 2", section comment (line 36) says "ECC L, alphanumeric", actual code uses Version 3, ECC M, byte mode.
-- `addSep()` function (line 109) is defined but never called — dead code.
-- Think-aloud comments left in source (lines 126-128): `"wait, version 3 has alignment..."` — should be removed.
-
-### Fix recommendation
-Either use a hardcoded pre-computed 25×25 module matrix (simplest — the file header comments already allude to this approach), or fix the encoder to use consistent V3-M parameters: `dataCapacity = 44`, `ecCount = 26`, and set `size = 29` in both `qrEncode` and `generateQR`.
-
----
-
-## #32 — "We are not a gaming company" tagline
-
-**Result: Present and correct.**
-
-- Rendered as italic monospace with a subtle green glow animation (`tagline-glow` keyframes).
-- Uses `--accent-highlight` and `rgba(184, 217, 77, ...)` — consistent with Apra Labs green palette.
-- Centered, visually cohesive with the rest of the sidebar.
-
-No issues.
+**Minor issue:** `package-lock.json` still contains `"name": "flash-khalas"` (2 occurrences). This is auto-generated — running `npm install` would fix it — but it's technically inconsistent. Low severity; not blocking.
 
 ---
 
-## #33 — "Apra Fleet is Open Source" + star-the-repo CTA
+## Demo Page Check (#37)
 
-**Result: Present and correct.**
+**Result: Bug — missing logo asset.**
 
-- Heading uses `--accent-primary` with uppercase tracking.
-- Star link opens `https://github.com/ApraPipes/apra-fleet` with `target="_blank"` and `rel="noopener noreferrer"`.
-- Hover state uses green background tint. Border uses `rgba(148, 186, 51, 0.4)`.
-- Layout is flexbox with `space-between` — heading left, CTA right.
+`AboutOverlay.jsx` structure:
+- Name: "Kashyap Jois" ✓
+- LinkedIn URL: `https://ae.linkedin.com/in/kashyap-jois-16a418103` ✓
+- Opens in new tab: `target="_blank"` with `rel="noopener noreferrer"` ✓
+- Dismissible: backdrop click calls `onClose`, close button (✕) present ✓
+- `e.stopPropagation()` on card prevents accidental dismiss when clicking inside ✓
 
-No issues.
+**Bug:** Logo `src="/apra_logo.jpg"` references a file that **does not exist** in `public/`. The `public/` directory contains only the `game/` subdirectory. The image will render as a broken icon. The logo file needs to be added to `public/apra_logo.jpg` before merge.
 
----
-
-## Styles (App.css)
-
-- All new classes are namespaced under `.branding-` — clean, no collisions.
-- Colors use CSS variables (`--accent-highlight`, `--accent-primary`, `--text-muted`) and Apra green rgba values.
-- Background (`rgba(10, 10, 20, 0.5)`) matches the dark theme.
-- `image-rendering: pixelated` on the QR canvas is a good touch for crisp module edges.
-- `flex-shrink: 0` prevents the branding section from collapsing.
-
-No issues.
+CSS (`App.css`):
+- About overlay styles (`.about-backdrop`, `.about-card`, `.about-close`, `.about-logo`, `.about-name`, `.about-linkedin`) are well-structured ✓
+- Backdrop uses `rgba(0,0,0,0.85)` with blur — good for readability ✓
+- Close button hover turns red (`--color-error`) — clear affordance ✓
+- All class names are namespaced under `about-` — no collisions ✓
 
 ---
 
-## Pipeline / Server Bug Fixes
+## QR Removal Check (#38)
 
-### `lib/pipeline.js`
-Adds `prompt_full` message handling to capture untruncated prompts during pipeline parsing. Clean, matches the existing pattern.
+**Result: Clean removal.**
 
-### `scripts/backfill-dispatches.js`
-Refactored from single-pass (post each entry immediately) to two-pass (collect into a Map by invocation ID, resolve `prompt_full` entries, then POST). Correct — fixes the truncated-prompt bug.
+`BrandingInfo.jsx` now contains only:
+1. Tagline: `"We are not a gaming company"` — italic monospace with green glow animation ✓
+2. Open-source CTA: "Apra Fleet is Open Source" heading + "★ Star the repo" link ✓
+   - Link target: `https://github.com/ApraPipes/apra-fleet` with `target="_blank"` and `rel="noopener noreferrer"` ✓
 
-### `server.js`
-Adds `Set`-based dedup in `autoRecordDispatches` keyed on `member|ts` to prevent duplicate dispatch records. The `Set` check runs before the more expensive `matchesDispatch` loop — good ordering.
+All QR code canvas logic (encoder, renderer, `generateQR`, `qrEncode`, `addSep`, Reed-Solomon) confirmed **removed**. No QR-related code remains anywhere in `src/`.
 
-No issues with these fixes.
+CSS references to QR (`image-rendering: pixelated`) in `App.css` are also gone from the current `BrandingInfo` styles, though the old review text mentioned them — the diff confirms the QR-related CSS was part of the old component, not the new one.
 
 ---
 
 ## Build & Tests
 
-- `npm run build`: passes, no warnings.
-- `npm test`: all 33 tests pass. Stderr shows jsdom canvas warnings (expected — jsdom doesn't implement Canvas natively, and the component gracefully returns early via `if (!ctx) return`).
+- `npm run build`: **passes** — no warnings, output: `index.html`, `index-*.css` (17.39 KB), `index-*.js` (152.54 KB).
+- `npm test`: **33/33 tests pass** across 5 suites (App, FleetStatus, GameFrame, pipeline, useFleetStatus).
 
 ---
 
 ## File Hygiene
 
-| File | Expected? |
-|---|---|
-| `src/components/BrandingInfo.jsx` (new) | Yes |
-| `src/App.jsx` | Yes |
-| `src/App.css` | Yes |
-| `lib/pipeline.js` | Yes (bug fix) |
-| `scripts/backfill-dispatches.js` | Yes (bug fix) |
-| `server.js` | Yes (bug fix) |
+| File | Change | Expected? |
+|---|---|---|
+| `README.md` | Rename | Yes |
+| `index.html` | Rename | Yes |
+| `package.json` | Rename | Yes |
+| `public/game/game.js` | Rename | Yes |
+| `public/game/index.html` | Rename | Yes |
+| `src/App.jsx` | Rename + about overlay integration | Yes |
+| `src/App.css` | Branding + about overlay styles | Yes |
+| `src/components/AboutOverlay.jsx` (new) | Demo end page | Yes |
+| `src/components/BrandingInfo.jsx` (new) | QR removed, tagline + CTA retained | Yes |
+| `src/components/FleetStatus.jsx` | Rename | Yes |
+| `src/components/GameFrame.jsx` | Rename | Yes |
+| `src/hooks/useFleetStatus.js` | Rename | Yes |
+| `lib/pipeline.js` | Rename + prompt_full handling | Yes |
+| `scripts/backfill-dispatches.js` | Rename + two-pass refactor | Yes |
+| `server.js` | Rename + dedup fix | Yes |
+| `tests/*.jsx`, `tests/*.js` (5 files) | Rename in test data | Yes |
+| `feedback.md` | Updated from prior review | Yes |
 
-No unexpected files. CLAUDE.md not committed.
+21 files changed total. No unexpected files. `CLAUDE.md` not committed (in `.gitignore`).
 
 ---
 
 ## Summary
 
-Issues #32 (tagline) and #33 (open-source CTA) are implemented correctly. The pipeline/server bug fixes are clean.
+**Rename (#36)** is thorough — zero old-spelling hits in source code. `package-lock.json` has a stale name but is auto-generated and non-blocking.
 
-~~**Issue #31 (QR code) has a critical encoding bug** — the encoder mixes Version 2 data parameters with a Version 3 matrix, and the renderer clips the matrix to 25×25. The result will render visually as "a QR code" but **will not scan**. This needs to be fixed before merge.~~
+**Demo page (#37)** is well-implemented (correct name, LinkedIn URL, new-tab, dismissible overlay with good UX) but **has a missing asset bug**: `public/apra_logo.jpg` does not exist, so the logo will render as a broken image. This must be fixed before merge.
 
-**Re-review:** All three QR bugs fixed. Encoder now uses consistent V3-M parameters (44 data + 26 EC = 70 codewords), renderer derives size from the matrix, dead code and stale comments removed. Build passes, all 33 tests pass. **Approved.**
+**QR removal (#38)** is clean — all encoder/canvas logic removed, tagline and open-source CTA preserved.
+
+Build passes, all 33 tests pass, file hygiene is clean.
+
+**Verdict: CHANGES NEEDED** — add the `apra_logo.jpg` file to `public/`.
