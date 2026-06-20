@@ -980,12 +980,15 @@ body {
 
 .about-linkedin {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 22px;
+  font-weight: bold;
   color: var(--accent-highlight);
   text-decoration: none;
-  padding: 6px 16px;
-  border: 1px solid rgba(148, 186, 51, 0.4);
+  padding: 12px 24px;
+  border: 2px solid rgba(148, 186, 51, 0.6);
   border-radius: var(--radius-sm);
+  text-align: center;
+  letter-spacing: 0.5px;
   transition: background 0.15s, border-color 0.15s;
 }
 

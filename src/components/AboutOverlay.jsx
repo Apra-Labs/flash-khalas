@@ -6,12 +6,12 @@ export default function AboutOverlay({ onClose }) {
         <img src="/apra_logo.jpg" alt="Apra Labs" className="about-logo" />
         <div className="about-name">Kashyap Jois</div>
         <a
-          href="https://ae.linkedin.com/in/kashyap-jois-16a418103"
+          href="https://www.linkedin.com/in/kashyapjois/"
           target="_blank"
           rel="noopener noreferrer"
           className="about-linkedin"
         >
-          LinkedIn
+          linkedin.com/in/kashyapjois
         </a>
       </div>
     </div>
