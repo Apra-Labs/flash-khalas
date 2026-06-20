@@ -2,7 +2,7 @@
 
 **Reviewer:** flash-khalas-reviewer
 **Date:** 2026-06-20
-**Verdict:** CHANGES NEEDED
+**Verdict:** APPROVED
 
 ---
 
@@ -59,11 +59,17 @@ No unexpected files modified. `CLAUDE.md` is in `.gitignore` (line 8) and not co
 
 ---
 
+## Re-review (2026-06-20)
+
+Both issues from the initial review have been addressed in commit `cdc73d0`:
+
+1. **CSS variable names** — `--accent-copper` → `--accent-primary`, `--accent-gold` → `--accent-highlight`. All 28 `var()` references updated throughout App.css. Zero remaining `accent-copper` or `accent-gold` references. ✓
+2. **Camel colors** — body/tail reverted to `#c8a450`, legs reverted to `#b89040`. Camel is tan/golden again. ✓
+
+Build passes. All 33 tests pass. No regressions.
+
+---
+
 ## Summary
 
-The rebrand correctly replaces the copper/gold palette with Apra Labs green across both the React wrapper CSS and game canvas code. Build and tests pass. No leftover old-palette hex values remain in accent code. Two issues need attention before merge:
-
-1. **Stale CSS variable names** — `--accent-copper` and `--accent-gold` still suggest the old palette. Rename to match the new green identity.
-2. **Green camel** — the camel sprite's body/leg colors were swept into the rebrand but are environmental, not branding. Revert to original tan/golden values.
-
-Both are small, low-risk fixes. Once addressed, this is ready to merge.
+The rebrand is clean and complete. Every copper/gold accent in both the React wrapper CSS and the game canvas has been mapped to a coherent Apra Labs green palette. CSS variable names now reflect the new identity. Environmental colors (sand, camel, terrain) are correctly preserved. **Approved as-is.**
