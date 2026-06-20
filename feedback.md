@@ -1,126 +1,107 @@
-# Branding Info Section — Code Review
+# Night Mode (GH #15) — Code Review
 
 **Reviewer:** flash-khalas-reviewer
-**Date:** 2026-06-20
-**Verdict:** CHANGES NEEDED → APPROVED (re-review 2026-06-20)
-
-**Fix notes (from doer):**
-- Bug 1 fixed: `generateQR` now derives `size` from `modules.length` instead of hardcoding 25.
-- Bug 2 fixed: `dataCapacity` changed from 28 → 44 (Version 3-M data codewords).
-- Bug 3 fixed: `rsEncode(codewords, 16)` → `rsEncode(codewords, 26)` (Version 3-M EC codewords).
-- Dead code removed: `addSep` function removed.
-- Think-aloud comments removed (former lines 126-128).
-- Stale header comments updated to reflect actual version/mode used.
-- Canvas size increased to 174×174 (CSS: 100×100) for ~5px/module rendered.
-
-**Re-review verification:**
-All three bugs confirmed fixed. Parameters now consistent: V3 matrix (29×29), 44 data + 26 EC = 70 codewords (V3-M). Renderer derives size from matrix. Dead code and stale comments cleaned up. Build passes, 33/33 tests pass.
+**Date:** 2026-06-20 10:05:00+04:00
+**Verdict:** APPROVED
 
 ---
 
-## #31 — QR Code (Pure JS/Canvas)
+## Night Mode Activation
 
-**Result: Broken — QR will not scan.**
+Night mode activates at `distance >= 20000`, which equals exactly 2000m in displayed units (the game divides distance by 10 for the HUD — line 1644: `Math.floor(distance / 10)` + `m`). The `nightModeAlpha` ramps from 0 to 1 at +0.005 per frame (~3.3 seconds at 60fps), giving a smooth dusk-to-dark transition. Both `nightMode` and `nightModeAlpha` are correctly reset to their initial values in `startGame()`.
 
-Three compounding bugs in `BrandingInfo.jsx`:
-
-### Bug 1: Matrix size vs. render size mismatch
-`qrEncode()` builds a **29×29** matrix (Version 3, line 49: `size = 17 + 4 * 3`), but `generateQR()` renders only **25×25** modules (line 18: `const size = 25`). The bottom 4 rows and right 4 columns are silently clipped.
-
-### Bug 2: Wrong data/ECC parameters for Version 3
-`dataCapacity = 28` and `ecCount = 16` (lines 73, 85) total 44 codewords — correct for **Version 2-M**, not Version 3-M which requires 44 data + 26 EC = 70 codewords. The format info declares ECC Level M, but the RS encoding doesn't match.
-
-### Bug 3: URL doesn't fit V2-M capacity
-The URL `https://apralabs.com/apra-fleet` (30 chars) needs 32 data codewords in byte mode (4-bit mode + 8-bit count + 240-bit data + 4-bit terminator = 256 bits). V2-M only supports 28 data codewords. The padding loop at line 80 never triggers because `codewords.length` (32) already exceeds `dataCapacity` (28), so the RS encoding receives mismatched input.
-
-### Minor issues
-- Stale comments: file header (line 3) says "Version 2", section comment (line 36) says "ECC L, alphanumeric", actual code uses Version 3, ECC M, byte mode.
-- `addSep()` function (line 109) is defined but never called — dead code.
-- Think-aloud comments left in source (lines 126-128): `"wait, version 3 has alignment..."` — should be removed.
-
-### Fix recommendation
-Either use a hardcoded pre-computed 25×25 module matrix (simplest — the file header comments already allude to this approach), or fix the encoder to use consistent V3-M parameters: `dataCapacity = 44`, `ecCount = 26`, and set `size = 29` in both `qrEncode` and `generateQR`.
+**PASS.**
 
 ---
 
-## #32 — "We are not a gaming company" tagline
+## Headlight Cone
 
-**Result: Present and correct.**
+The cone uses even-odd fill compositing — a full-canvas rect plus an inset trapezoid that the even-odd rule cuts out, leaving the rest of the canvas darkened at 85% opacity. The cone originates at the player car (`frontY = PLAYER_Y + 8`, 8px wide) and fans out to `spread = 110` (220px total) at `topY = 132`, just past the sky/road boundary. A warm linear gradient (pale yellow fading to transparent) overlays the cone interior for a convincing lit-pavement look.
 
-- Rendered as italic monospace with a subtle green glow animation (`tagline-glow` keyframes).
-- Uses `--accent-highlight` and `rgba(184, 217, 77, ...)` — consistent with Apra Labs green palette.
-- Centered, visually cohesive with the rest of the sidebar.
+Render order is correct: the overlay is drawn after NPC sprites but before the player car, so the player is always fully visible on top of the darkness. HUD, game-over screen, and flash effects also draw after the overlay and remain readable.
 
-No issues.
+**PASS.**
 
----
-
-## #33 — "Apra Fleet is Open Source" + star-the-repo CTA
-
-**Result: Present and correct.**
-
-- Heading uses `--accent-primary` with uppercase tracking.
-- Star link opens `https://github.com/ApraPipes/apra-fleet` with `target="_blank"` and `rel="noopener noreferrer"`.
-- Hover state uses green background tint. Border uses `rgba(148, 186, 51, 0.4)`.
-- Layout is flexbox with `space-between` — heading left, CTA right.
-
-No issues.
+**NOTE:** The comment on line 1789 says the cone is "wound opposite to rect" — actually both paths wind clockwise in screen coordinates. Even-odd fill doesn't require opposite winding (that's the nonzero rule), so the code works correctly; the comment is just slightly misleading.
 
 ---
 
-## Styles (App.css)
+## NPC Headlights
 
-- All new classes are namespaced under `.branding-` — clean, no collisions.
-- Colors use CSS variables (`--accent-highlight`, `--accent-primary`, `--text-muted`) and Apra green rgba values.
-- Background (`rgba(10, 10, 20, 0.5)`) matches the dark theme.
-- `image-rendering: pixelated` on the QR canvas is a good touch for crisp module edges.
-- `flex-shrink: 0` prevents the branding section from collapsing.
+`drawNpcHeadlights()` renders two layers per NPC: a soft glow (7px radius, 20% alpha) and a bright core (2.5px, 90% alpha) for both front headlights (warm yellow `#ffffaa`) and rear taillights (red `#ff2222`). Headlight x-positions are 15 and 33 (symmetric within the 48px car width). The `patrol` type gets a slightly different headY offset (`y + 4` vs `y + 6`), which is a nice detail.
 
-No issues.
+Headlights are drawn after the night overlay so they punch through the darkness — correct behavior, since you should see oncoming/ahead NPC lights even in dark areas.
+
+**PASS.**
 
 ---
 
-## Pipeline / Server Bug Fixes
+## Flash Effect at Night
 
-### `lib/pipeline.js`
-Adds `prompt_full` message handling to capture untruncated prompts during pipeline parsing. Clean, matches the existing pattern.
+`drawFlashEffect()` multiplies opacity by `nightMult = 1 + nightModeAlpha * 1.5`, reaching 2.5x at full night, capped at `globalAlpha = 1.0` via `Math.min`. The beam width also widens from 20px to 30px at night. Both changes make the flash noticeably more dramatic in darkness — a full-screen white flash at night vs the subtler daytime effect.
 
-### `scripts/backfill-dispatches.js`
-Refactored from single-pass (post each entry immediately) to two-pass (collect into a Map by invocation ID, resolve `prompt_full` entries, then POST). Correct — fixes the truncated-prompt bug.
+**PASS.**
 
-### `server.js`
-Adds `Set`-based dedup in `autoRecordDispatches` keyed on `member|ts` to prevent duplicate dispatch records. The `Set` check runs before the more expensive `matchesDispatch` loop — good ordering.
+---
 
-No issues with these fixes.
+## Sky Transition & Stars
+
+Sky color interpolates from `#0f3460` (rgb 15,52,96) to `#010818` (rgb 1,8,24) using per-channel lerp. The math is correct: `Math.round(dayVal + (nightVal - dayVal) * nightModeAlpha)`.
+
+Stars: 60 positions generated deterministically (no `Math.random`) with a hash-like formula, confined to y=5–104 (within the 0–130 sky area). Sizes alternate between 1px and 1.5px. A `sin`-based twinkle modulates each star's alpha per frame. Stars fade in with `nightModeAlpha`.
+
+**PASS.**
+
+**NOTE:** Stars are drawn before the night overlay, so they receive the full 85% black layer on top. Effective star visibility at full night is roughly `alpha * 0.15` — faint but present. If this is intentional (subtle atmospheric effect), it works fine. If you want more prominent stars, move `drawStars()` to after `drawNightOverlay()` or exclude the sky region (y < 130) from the dark overlay. Not a blocker.
+
+---
+
+## Performance
+
+All night-mode rendering uses simple canvas operations: `fillRect`, `arc`, `fill('evenodd')`, `createLinearGradient`, `clip`. No per-pixel operations (`getImageData`/`putImageData`), no expensive compositing modes. The stars loop is capped at 60 iterations. NPC headlights loop over active NPCs (typically < 10). The early-return guard `if (nightModeAlpha === 0) return` in `drawNightOverlay()` and `drawNpcHeadlights()` avoids all night-mode work during daytime play.
+
+**PASS — no performance concerns.**
+
+---
+
+## Magic Numbers
+
+Inline constants: `topY = 132`, `spread = 110`, `frontY = PLAYER_Y + 8`, `nightModeAlpha + 0.005`, `nightModeAlpha * 0.85`. All are local to their functions and contextually clear (132 ≈ sky/road boundary at 130, spread is half the cone width, etc.). Extracting them to named constants would add clarity but isn't strictly necessary given the comment density.
+
+**NOTE — acceptable as-is.**
+
+---
+
+## File Hygiene
+
+Night-mode changes are confined to `public/game/game.js` as specified in the requirements. No new asset files needed. The commit (`b924fde`) also includes a Khalas → Khallas rename and branding/pipeline changes from prior PRs already on the branch — these were reviewed separately and are not re-reviewed here.
+
+**PASS.**
 
 ---
 
 ## Build & Tests
 
 - `npm run build`: passes, no warnings.
-- `npm test`: all 33 tests pass. Stderr shows jsdom canvas warnings (expected — jsdom doesn't implement Canvas natively, and the component gracefully returns early via `if (!ctx) return`).
+- `npm test`: 33/33 tests pass across 5 suites.
 
----
-
-## File Hygiene
-
-| File | Expected? |
-|---|---|
-| `src/components/BrandingInfo.jsx` (new) | Yes |
-| `src/App.jsx` | Yes |
-| `src/App.css` | Yes |
-| `lib/pipeline.js` | Yes (bug fix) |
-| `scripts/backfill-dispatches.js` | Yes (bug fix) |
-| `server.js` | Yes (bug fix) |
-
-No unexpected files. CLAUDE.md not committed.
+**PASS.**
 
 ---
 
 ## Summary
 
-Issues #32 (tagline) and #33 (open-source CTA) are implemented correctly. The pipeline/server bug fixes are clean.
+All four acceptance criteria are met:
 
-~~**Issue #31 (QR code) has a critical encoding bug** — the encoder mixes Version 2 data parameters with a Version 3 matrix, and the renderer clips the matrix to 25×25. The result will render visually as "a QR code" but **will not scan**. This needs to be fixed before merge.~~
+| Criterion | Status |
+|---|---|
+| Night mode activates after 2000m | PASS |
+| Headlight cone illuminates road ahead | PASS |
+| NPC cars have visible headlights | PASS |
+| Flash is brighter/more dramatic at night | PASS |
 
-**Re-review:** All three QR bugs fixed. Encoder now uses consistent V3-M parameters (44 data + 26 EC = 70 codewords), renderer derives size from the matrix, dead code and stale comments removed. Build passes, all 33 tests pass. **Approved.**
+The implementation is clean and well-structured. The even-odd compositing for the headlight cone is the right technique. Render ordering correctly keeps the player visible above the darkness. State resets properly on new game. No performance concerns.
+
+Two minor notes (not blockers): stars are slightly muted by the overlay (move `drawStars()` after `drawNightOverlay()` if you want brighter stars), and one comment about cone winding is technically inaccurate while the code itself is correct. Neither requires changes before merge.
+
+**Approved as-is.**
