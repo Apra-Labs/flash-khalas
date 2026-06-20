@@ -22,7 +22,7 @@ function formatDuration(ms) {
 }
 
 function memberShort(name) {
-  return (name || '').replace('flash-khalas-', '');
+  return (name || '').replace('flash-khallas-', '');
 }
 
 const STATUS_ICONS = { done: '✓', running: '▶', error: '✗', timeout: '⏱', interrupted: '—' };

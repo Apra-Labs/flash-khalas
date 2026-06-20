@@ -17,7 +17,7 @@ export default function GameFrame({ featureComplete }) {
       {reloading && <div className="reload-overlay">Reloading...</div>}
       <iframe
         src={`/game/index.html${cacheBust}`}
-        title="Flash Khalas Game"
+        title="Flash Khallas Game"
         allow="autoplay"
       />
     </div>

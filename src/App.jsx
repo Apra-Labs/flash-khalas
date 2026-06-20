@@ -10,7 +10,7 @@ export default function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>Flash Khalas</h1>
+        <h1>Flash Khallas</h1>
         <span className="subtitle">powered by apra-fleet</span>
       </header>
       <main className="app-main">
