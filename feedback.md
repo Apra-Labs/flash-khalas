@@ -1,126 +1,62 @@
-# Branding Info Section — Code Review
+# Night Mode (GH #15) — Code Review
 
 **Reviewer:** flash-khalas-reviewer
-**Date:** 2026-06-20
-**Verdict:** CHANGES NEEDED → APPROVED (re-review 2026-06-20)
-
-**Fix notes (from doer):**
-- Bug 1 fixed: `generateQR` now derives `size` from `modules.length` instead of hardcoding 25.
-- Bug 2 fixed: `dataCapacity` changed from 28 → 44 (Version 3-M data codewords).
-- Bug 3 fixed: `rsEncode(codewords, 16)` → `rsEncode(codewords, 26)` (Version 3-M EC codewords).
-- Dead code removed: `addSep` function removed.
-- Think-aloud comments removed (former lines 126-128).
-- Stale header comments updated to reflect actual version/mode used.
-- Canvas size increased to 174×174 (CSS: 100×100) for ~5px/module rendered.
-
-**Re-review verification:**
-All three bugs confirmed fixed. Parameters now consistent: V3 matrix (29×29), 44 data + 26 EC = 70 codewords (V3-M). Renderer derives size from matrix. Dead code and stale comments cleaned up. Build passes, 33/33 tests pass.
+**Date:** 2026-06-20 10:27:00+05:30
+**Verdict:** APPROVED
 
 ---
 
-## #31 — QR Code (Pure JS/Canvas)
+## Acceptance Criteria
 
-**Result: Broken — QR will not scan.**
+**Night mode activates after 2000m — PASS.** The check `distance >= 20000` at `game.js:632` correctly maps to the 2000m displayed distance (the internal `distance` unit is 1/10th of a meter, confirmed by the display code at line 1640: `Math.floor(distance / 10)` + "m"). The `nightMode` flag is properly reset to `false` in `startGame()` (line 505), so restarts begin in day mode.
 
-Three compounding bugs in `BrandingInfo.jsx`:
+**Headlight cone illuminates road ahead — PASS.** `drawNightOverlay()` (lines 1768–1782) fills the entire canvas with a dark overlay (`rgba(0, 2, 15, 0.88)`) using the `evenodd` fill rule to carve out a trapezoidal headlight cone. The cone fans from 20px at the car to 160px at 260px ahead — visually convincing and a clean compositing approach. No auxiliary canvas or extra blend modes needed.
 
-### Bug 1: Matrix size vs. render size mismatch
-`qrEncode()` builds a **29×29** matrix (Version 3, line 49: `size = 17 + 4 * 3`), but `generateQR()` renders only **25×25** modules (line 18: `const size = 25`). The bottom 4 rows and right 4 columns are silently clipped.
+**NPC cars have visible headlights — PASS.** `drawNPCHeadlights()` (lines 1784–1797) draws two radial gradient glows per NPC at x-offsets 15 and 33 (symmetric on the 48px-wide sprite). Warm yellow color (`rgba(255, 240, 160)`) fading to transparent — reads well as headlights. Drawn after the night overlay so they glow through the darkness.
 
-### Bug 2: Wrong data/ECC parameters for Version 3
-`dataCapacity = 28` and `ecCount = 16` (lines 73, 85) total 44 codewords — correct for **Version 2-M**, not Version 3-M which requires 44 data + 26 EC = 70 codewords. The format info declares ECC Level M, but the RS encoding doesn't match.
-
-### Bug 3: URL doesn't fit V2-M capacity
-The URL `https://apralabs.com/apra-fleet` (30 chars) needs 32 data codewords in byte mode (4-bit mode + 8-bit count + 240-bit data + 4-bit terminator = 256 bits). V2-M only supports 28 data codewords. The padding loop at line 80 never triggers because `codewords.length` (32) already exceeds `dataCapacity` (28), so the RS encoding receives mismatched input.
-
-### Minor issues
-- Stale comments: file header (line 3) says "Version 2", section comment (line 36) says "ECC L, alphanumeric", actual code uses Version 3, ECC M, byte mode.
-- `addSep()` function (line 109) is defined but never called — dead code.
-- Think-aloud comments left in source (lines 126-128): `"wait, version 3 has alignment..."` — should be removed.
-
-### Fix recommendation
-Either use a hardcoded pre-computed 25×25 module matrix (simplest — the file header comments already allude to this approach), or fix the encoder to use consistent V3-M parameters: `dataCapacity = 44`, `ecCount = 26`, and set `size = 29` in both `qrEncode` and `generateQR`.
+**Flash is brighter/more dramatic at night — PASS.** In `drawFlashEffect()` (lines 1527–1538), the overlay alpha is boosted from 0.3 to 0.75 and the beam alpha from 0.6 to 1.0 during night mode, with beam width widened from 20px to 28px. Both values are clamped with `Math.min(1, ...)` to avoid invalid alpha. The visual difference should be noticeably more dramatic.
 
 ---
 
-## #32 — "We are not a gaming company" tagline
+## Sky Transition
 
-**Result: Present and correct.**
-
-- Rendered as italic monospace with a subtle green glow animation (`tagline-glow` keyframes).
-- Uses `--accent-highlight` and `rgba(184, 217, 77, ...)` — consistent with Apra Labs green palette.
-- Centered, visually cohesive with the rest of the sidebar.
-
-No issues.
+**PASS.** The sky background switches from `COL.sky` (`#0f3460`) to `#020a1a` (deep dark navy) at line 1829. Stars are drawn via `drawStars()` (lines 1757–1766) using 55 pre-seeded positions deterministically generated (no `Math.random()`). Stars are confined to y: 4–122, safely within the 130px sky region. Twinkle effect via `Math.sin(frameTick * 0.05 + s.phase)` gives alpha range 0.1–0.9. Nice touch.
 
 ---
 
-## #33 — "Apra Fleet is Open Source" + star-the-repo CTA
+## Drawing Order & HUD Visibility
 
-**Result: Present and correct.**
+**PASS.** The rendering sequence (lines 1829–1852) is correct:
 
-- Heading uses `--accent-primary` with uppercase tracking.
-- Star link opens `https://github.com/ApraPipes/apra-fleet` with `target="_blank"` and `rel="noopener noreferrer"`.
-- Hover state uses green background tint. Border uses `rgba(148, 186, 51, 0.4)`.
-- Layout is flexbox with `space-between` — heading left, CTA right.
+1. Sky fill + stars → skyline → road → speed lines → buildings → power-ups → NPCs → player car
+2. `drawNightOverlay()` — darkens everything except headlight cone
+3. `drawNPCHeadlights()` — glow on top of darkness
+4. Flash/turbo/yalla effects — on top of everything
+5. `drawHUD()` → `drawYallaPopup()` → `drawTouchButtons()` — UI elements rendered after the night overlay, so they remain fully legible
 
-No issues.
-
----
-
-## Styles (App.css)
-
-- All new classes are namespaced under `.branding-` — clean, no collisions.
-- Colors use CSS variables (`--accent-highlight`, `--accent-primary`, `--text-muted`) and Apra green rgba values.
-- Background (`rgba(10, 10, 20, 0.5)`) matches the dark theme.
-- `image-rendering: pixelated` on the QR canvas is a good touch for crisp module edges.
-- `flex-shrink: 0` prevents the branding section from collapsing.
-
-No issues.
+No existing draw calls were reordered. New functions are inserted at the correct z-position.
 
 ---
 
-## Pipeline / Server Bug Fixes
+## File Hygiene & Build
 
-### `lib/pipeline.js`
-Adds `prompt_full` message handling to capture untruncated prompts during pipeline parsing. Clean, matches the existing pattern.
-
-### `scripts/backfill-dispatches.js`
-Refactored from single-pass (post each entry immediately) to two-pass (collect into a Map by invocation ID, resolve `prompt_full` entries, then POST). Correct — fixes the truncated-prompt bug.
-
-### `server.js`
-Adds `Set`-based dedup in `autoRecordDispatches` keyed on `member|ts` to prevent duplicate dispatch records. The `Set` check runs before the more expensive `matchesDispatch` loop — good ordering.
-
-No issues with these fixes.
+**PASS.** Only `public/game/game.js` was modified (single commit `cf198d5`). No new files, no asset changes, no wrapper/component modifications. Build succeeds (`npm run build`). All 33 tests pass across 5 test files (`npm test`).
 
 ---
 
-## Build & Tests
+## Performance
 
-- `npm run build`: passes, no warnings.
-- `npm test`: all 33 tests pass. Stderr shows jsdom canvas warnings (expected — jsdom doesn't implement Canvas natively, and the component gracefully returns early via `if (!ctx) return`).
+**PASS.** The `evenodd` compositing for the headlight cone is efficient — single fill path, no offscreen canvas. Star rendering is lightweight (55 small arcs). NOTE: `drawNPCHeadlights()` creates two `ctx.createRadialGradient()` calls per NPC per frame. With the typical NPC count on screen (5–8), this is fine, but if NPC density ever increases significantly it could become a hotspot. Not a concern at current scale.
 
 ---
 
-## File Hygiene
+## Style Notes (non-blocking)
 
-| File | Expected? |
-|---|---|
-| `src/components/BrandingInfo.jsx` (new) | Yes |
-| `src/App.jsx` | Yes |
-| `src/App.css` | Yes |
-| `lib/pipeline.js` | Yes (bug fix) |
-| `scripts/backfill-dispatches.js` | Yes (bug fix) |
-| `server.js` | Yes (bug fix) |
-
-No unexpected files. CLAUDE.md not committed.
+- **Magic numbers**: The headlight cone dimensions (`coneLen = 260`, `coneHW = 80`, car opening width `10`) and NPC headlight offsets (`15`, `33`, `6`) are inline literals. They're clear in context and documented by the variable names where present, so this is not a blocker — but extracting the cone dimensions to named constants (similar to the existing `CAR_W`, `CAR_H` pattern) would marginally improve readability.
+- **`drawStars()` global alpha**: Mutates `ctx.globalAlpha` directly rather than using `save()/restore()`. Works correctly since it resets to 1 at the end, but a `save()/restore()` wrapper would be slightly more defensive. Minor.
 
 ---
 
 ## Summary
 
-Issues #32 (tagline) and #33 (open-source CTA) are implemented correctly. The pipeline/server bug fixes are clean.
-
-~~**Issue #31 (QR code) has a critical encoding bug** — the encoder mixes Version 2 data parameters with a Version 3 matrix, and the renderer clips the matrix to 25×25. The result will render visually as "a QR code" but **will not scan**. This needs to be fixed before merge.~~
-
-**Re-review:** All three QR bugs fixed. Encoder now uses consistent V3-M parameters (44 data + 26 EC = 70 codewords), renderer derives size from the matrix, dead code and stale comments removed. Build passes, all 33 tests pass. **Approved.**
+All four acceptance criteria are met. The implementation is clean: the `evenodd` compositing approach for the headlight cone is elegant and performant, the drawing order preserves HUD visibility, star generation is deterministic, and the flash intensity boost at night adds good gameplay feel. Build and tests pass with no regressions. Only `game.js` was touched. The two style notes above are non-blocking polish items. **Approved for merge.**
