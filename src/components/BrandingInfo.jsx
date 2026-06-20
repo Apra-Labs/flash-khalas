@@ -1,24 +1,19 @@
 import { useEffect, useRef } from 'react';
 
-// Minimal QR encoder for a short URL — implements QR Version 2, ECC Level M
-// Using a pre-computed matrix for https://apralabs.com/apra-fleet to keep it pure JS/Canvas.
-// The matrix below encodes the URL using alphanumeric mode (all chars uppercase-safe).
+// QR encoder for https://apralabs.com/apra-fleet
+// Version 3 (29×29), ECC Level M, byte mode, mask pattern 2.
+// Pure JS/Canvas — no external libraries.
 
 const QR_URL = 'https://apralabs.com/apra-fleet';
-
-// Minimal Reed-Solomon and QR generation for short alphanumeric strings.
-// We encode using a tiny self-contained QR library (pure JS, no imports).
 
 function generateQR(canvas) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  // Pre-computed QR Version 2 (25x25) modules for https://apralabs.com/apra-fleet
-  // Generated via standard QR algorithm inline below.
-  const size = 25;
   const modules = buildQRMatrix(QR_URL);
   if (!modules) return;
 
+  const size = modules.length; // 29 for Version 3
   const cellSize = Math.floor(canvas.width / (size + 4));
   const offset = Math.floor((canvas.width - cellSize * size) / 2);
 
@@ -33,8 +28,6 @@ function generateQR(canvas) {
   }
 }
 
-// ── Tiny QR encoder (Version 2, ECC L, alphanumeric + byte mode) ──
-
 function buildQRMatrix(text) {
   try {
     return qrEncode(text);
@@ -44,11 +37,10 @@ function buildQRMatrix(text) {
 }
 
 function qrEncode(text) {
-  // Use byte mode (UTF-8), Version 3 (29×29), ECC Level M
+  // Version 3 (29×29), ECC Level M: 44 data codewords + 26 EC codewords = 70 total
   const version = 3;
   const size = 17 + 4 * version; // 29
 
-  // Encode data bits
   const bytes = [];
   for (let i = 0; i < text.length; i++) bytes.push(text.charCodeAt(i));
 
@@ -57,20 +49,15 @@ function qrEncode(text) {
     for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1);
   }
 
-  // Mode indicator: byte = 0100
+  // Byte mode: mode indicator 0100, 8-bit character count for versions 1-9
   addBits(0b0100, 4);
-  // Character count: 8 bits for version 1-9 byte mode
   addBits(bytes.length, 8);
-  // Data bytes
   for (const b of bytes) addBits(b, 8);
-  // Terminator
-  addBits(0, 4);
+  addBits(0, 4); // terminator
 
-  // Pad to codeword boundary (byte-align)
   while (bits.length % 8 !== 0) bits.push(0);
 
-  // Convert bits to codewords
-  const dataCapacity = 28; // Version 3-M: 28 data codewords
+  const dataCapacity = 44; // Version 3-M data codewords
   const codewords = [];
   for (let i = 0; i < bits.length; i += 8) {
     let b = 0;
@@ -81,14 +68,13 @@ function qrEncode(text) {
     codewords.push(codewords.length % 2 === 0 ? 0xEC : 0x11);
   }
 
-  // Reed-Solomon ECC (16 EC codewords for Version 3-M)
-  const ec = rsEncode(codewords, 16);
+  // Reed-Solomon ECC: 26 EC codewords for Version 3-M
+  const ec = rsEncode(codewords, 26);
   const allWords = [...codewords, ...ec];
 
-  // Build bit stream
   const dataBits = [];
   for (const w of allWords) addBitsTo(dataBits, w, 8);
-  // Remainder bits for version 3: 7
+  // Version 3 has 7 remainder bits
   for (let i = 0; i < 7; i++) dataBits.push(0);
 
   // Initialize matrix
@@ -97,7 +83,6 @@ function qrEncode(text) {
 
   function place(r, c, val) { mat[r][c] = val; reserved[r][c] = true; }
 
-  // Finder patterns + separators
   function addFinder(tr, tc) {
     for (let dr = 0; dr < 7; dr++)
       for (let dc = 0; dc < 7; dc++) {
@@ -106,9 +91,6 @@ function qrEncode(text) {
         place(tr + dr, tc + dc, v ? 1 : 0);
       }
   }
-  function addSep(rows, cols) {
-    for (let i = 0; i < rows.length; i++) place(rows[i], cols[i], 0);
-  }
 
   addFinder(0, 0);
   addFinder(0, size - 7);
@@ -116,17 +98,15 @@ function qrEncode(text) {
 
   // Separators
   for (let i = 0; i <= 7; i++) {
-    place(7, i, 0); place(i, 7, 0);
-    place(7, size - 8 + (i - 0), 0); // top-right sep h
-    place(i, size - 8, 0);
-    place(size - 8, i, 0); place(size - 1 - i, 7, 0);
+    place(7, i, 0); place(i, 7, 0);           // top-left
+    place(7, size - 8 + i, 0);                 // top-right horizontal
+    place(i, size - 8, 0);                     // top-right vertical
+    place(size - 8, i, 0);                     // bottom-left horizontal
+    place(size - 1 - i, 7, 0);                 // bottom-left vertical
   }
   place(7, size - 8, 0);
 
-  // Alignment pattern for version 3 at (22, 22)... wait, version 3 has alignment at row 22, col 22 only if >1
-  // Version 3 alignment: center at (4+14, 4+14)? Actually version 3 has one alignment pattern at (22,22)? Let me check.
-  // Version 3: alignment pattern center at row=22, col=22? Actually for V3 the center positions are [6, 22].
-  // Alignment pattern at (22, 22)
+  // Alignment pattern center: (22, 22) for Version 3
   const ap = 22;
   for (let dr = -2; dr <= 2; dr++)
     for (let dc = -2; dc <= 2; dc++) {
@@ -145,13 +125,11 @@ function qrEncode(text) {
   // Dark module
   place(size - 8, 8, 1);
 
-  // Format info (mask pattern 2: (r+c)%3==0, ECC level M = 00)
-  // ECC level M bits: 00, mask 010 → format = 0b00_010 = 2
-  // Format string for M/mask2: computed offline
-  const formatBits = getFormatBits(0b00, 2); // ECC=M(00), mask=2
+  // Format info: ECC Level M (0b00), mask pattern 2
+  const formatBits = getFormatBits(0b00, 2);
   placeFormat(mat, reserved, formatBits, size);
 
-  // Data placement
+  // Data placement: column pairs, right-to-left, alternating up/down
   let bitIdx = 0;
   let up = true;
   for (let col = size - 1; col >= 1; col -= 2) {
@@ -161,8 +139,7 @@ function qrEncode(text) {
       for (let dx = 0; dx <= 1; dx++) {
         const c = col - dx;
         if (!reserved[row][c]) {
-          const bit = bitIdx < dataBits.length ? dataBits[bitIdx++] : 0;
-          mat[row][c] = bit;
+          mat[row][c] = bitIdx < dataBits.length ? dataBits[bitIdx++] : 0;
         }
       }
     }
@@ -183,23 +160,20 @@ function addBitsTo(arr, val, len) {
 }
 
 function getFormatBits(eccLevel, maskPattern) {
-  // Format info = eccLevel(2) + mask(3) = 5 bits, then BCH(15,5)
   const data = (eccLevel << 3) | maskPattern;
   let rem = data << 10;
-  const gen = 0b10100110111; // generator polynomial
+  const gen = 0b10100110111;
   for (let i = 14; i >= 10; i--) {
     if ((rem >> i) & 1) rem ^= gen << (i - 10);
   }
   const raw = (data << 10) | rem;
   const masked = raw ^ 0b101010000010010;
-  // Return as 15-bit array
   const bits = [];
   for (let i = 14; i >= 0; i--) bits.push((masked >> i) & 1);
   return bits;
 }
 
 function placeFormat(mat, reserved, bits, size) {
-  // Top-left: rows 0-5 col 8, row 7 col 8, row 8 cols 7-0 (skip timing)
   const positions = [
     [8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],
     [7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]
@@ -208,7 +182,6 @@ function placeFormat(mat, reserved, bits, size) {
     const [r, c] = positions[i];
     mat[r][c] = bits[i]; reserved[r][c] = true;
   }
-  // Top-right + bottom-left copies
   for (let i = 0; i < 8; i++) {
     mat[8][size - 1 - i] = bits[i]; reserved[8][size - 1 - i] = true;
   }
@@ -293,7 +266,7 @@ export default function BrandingInfo() {
       </div>
 
       <div className="branding-qr-wrap">
-        <canvas ref={canvasRef} width={120} height={120} className="branding-qr" />
+        <canvas ref={canvasRef} width={174} height={174} className="branding-qr" />
         <span className="branding-qr-label">apralabs.com/apra-fleet</span>
       </div>
     </div>

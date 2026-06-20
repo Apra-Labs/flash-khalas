@@ -2,7 +2,16 @@
 
 **Reviewer:** flash-khalas-reviewer
 **Date:** 2026-06-20
-**Verdict:** CHANGES NEEDED
+**Verdict:** CHANGES NEEDED → FIXED (2026-06-20)
+
+**Fix notes:**
+- Bug 1 fixed: `generateQR` now derives `size` from `modules.length` instead of hardcoding 25.
+- Bug 2 fixed: `dataCapacity` changed from 28 → 44 (Version 3-M data codewords).
+- Bug 3 fixed: `rsEncode(codewords, 16)` → `rsEncode(codewords, 26)` (Version 3-M EC codewords).
+- Dead code removed: `addSep` function removed.
+- Think-aloud comments removed (former lines 126-128).
+- Stale header comments updated to reflect actual version/mode used.
+- Canvas size increased to 174×174 (CSS: 100×100) for ~3.4px/module displayed.
 
 ---
 
