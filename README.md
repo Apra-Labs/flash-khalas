@@ -1,4 +1,4 @@
-# Flash Khalas
+# Flash Khallas
 
 A quirky Dubai highway driving game — powered by [apra-fleet](https://github.com/Apra-Labs/apra-fleet).
 
@@ -36,13 +36,13 @@ Type a feature request or bug report in the chat panel to trigger an apra-fleet 
 | Car | What happens when you flash |
 |-----|----------------------------|
 | Regular (grey) | Moves aside — you score! |
-| Cop (dark blue, flashing lights) | You get busted — KHALAS! |
+| Cop (dark blue, flashing lights) | You get busted — KHALLAS! |
 | Nissan Patrol (gold) | Just goes faster |
 
 ## Architecture
 
 ```
-flash-khalas/
+flash-khallas/
 ├── src/                  # React wrapper app
 │   ├── components/
 │   │   ├── ChatPanel     # Fleet command input
@@ -82,7 +82,7 @@ curl -X POST http://localhost:3001/api/dispatches \
   -H 'Content-Type: application/json' \
   -d '{
     "ts": "2026-06-19T14:00:00.000Z",
-    "member": "flash-khalas-doer",
+    "member": "flash-khallas-doer",
     "prompt": "Full task prompt text here...",
     "response": "Fleet member response here..."
   }'
@@ -90,6 +90,6 @@ curl -X POST http://localhost:3001/api/dispatches \
 
 Fields:
 - `ts` — ISO timestamp matching the dispatch start time (used for task matching); defaults to now if omitted
-- `member` — fleet member name (e.g. `flash-khalas-doer`, `flash-khalas-reviewer`)
+- `member` — fleet member name (e.g. `flash-khallas-doer`, `flash-khallas-reviewer`)
 - `prompt` — full prompt text (used as `fullPrompt` in the modal)
 - `response` — response text shown in the modal Output section

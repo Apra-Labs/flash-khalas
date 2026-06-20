@@ -7,7 +7,7 @@ export function parseStatusline(line) {
   for (const entry of entries) {
     const m = entry.match(/^(.+?)\s+([\w-]+):(⚡|💤|❌)\s+(busy|idle|error)(?:\(([^)]*)\))?/u);
     if (!m) continue;
-    if (!m[2].includes('flash-khalas')) continue;
+    if (!m[2].includes('flash-khallas')) continue;
     members.push({
       icon: m[1],
       name: m[2],

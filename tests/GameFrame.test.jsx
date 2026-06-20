@@ -5,7 +5,7 @@ import GameFrame from '../src/components/GameFrame';
 describe('GameFrame', () => {
   it('renders iframe with base src when featureComplete is false', () => {
     render(<GameFrame featureComplete={false} />);
-    const iframe = screen.getByTitle('Flash Khalas Game');
+    const iframe = screen.getByTitle('Flash Khallas Game');
     expect(iframe.src).toContain('/game/index.html');
     expect(iframe.src).not.toContain('?v=');
   });
@@ -28,7 +28,7 @@ describe('GameFrame', () => {
 
   it('adds cache-bust ?v= param to iframe src when featureComplete is true', () => {
     render(<GameFrame featureComplete={true} />);
-    const iframe = screen.getByTitle('Flash Khalas Game');
+    const iframe = screen.getByTitle('Flash Khallas Game');
     expect(iframe.src).toContain('?v=');
   });
 

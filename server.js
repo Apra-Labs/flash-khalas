@@ -14,8 +14,8 @@ const DATA_DIR = join(homedir(), '.apra-fleet', 'data');
 const LOGS_DIR = join(DATA_DIR, 'logs');
 const STATUSLINE_PATH = join(DATA_DIR, 'statusline.txt');
 const STATE_PATH = join(DATA_DIR, 'statusline-state.json');
-const REQUEST_PATH = join(DATA_DIR, 'flash-khalas-request.json');
-const DISPATCHES_PATH = join(DATA_DIR, 'flash-khalas-dispatches.jsonl');
+const REQUEST_PATH = join(DATA_DIR, 'flash-khallas-request.json');
+const DISPATCHES_PATH = join(DATA_DIR, 'flash-khallas-dispatches.jsonl');
 
 if (process.env.NODE_ENV !== 'production') {
   app.use(cors());

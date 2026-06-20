@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// One-time script: reads all fleet logs and POSTs flash-khalas dispatch records to /api/dispatches.
+// One-time script: reads all fleet logs and POSTs flash-khallas dispatch records to /api/dispatches.
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -26,7 +26,7 @@ async function main() {
       try { obj = JSON.parse(line); } catch { continue; }
 
       if (obj.tag !== 'execute_prompt') continue;
-      if (!obj.mem?.includes('flash-khalas')) continue;
+      if (!obj.mem?.includes('flash-khallas')) continue;
 
       const msg = obj.msg || '';
 

@@ -52,7 +52,7 @@ const MILESTONE_MSGS = {
   80:  ['YALLA!',        'SHEIKH ZAYED APPROVED'],
   100: ['YALLA HABIBI!', '100 KM/H - MASHALLAH!'],
   120: ['YALLA YALLA!',  'DUBAI SPEED UNLOCKED'],
-  140: ['KHALAS SLOW!',  '140 KM/H - WALLAH!'],
+  140: ['KHALLAS SLOW!',  '140 KM/H - WALLAH!'],
   160: ['MAXIMUM YALLA!','BURJ KHALIFA FAST!'],
 };
 const MILESTONE_SPEEDS = Object.keys(MILESTONE_MSGS).map(Number);
@@ -1576,7 +1576,7 @@ function drawTitle() {
   ctx.font = '24px "Press Start 2P", monospace';
   ctx.textAlign = 'center';
   ctx.fillText('FLASH', canvas.width / 2, 250);
-  ctx.fillText('KHALAS', canvas.width / 2, 290);
+  ctx.fillText('KHALLAS', canvas.width / 2, 290);
 
   ctx.fillStyle = COL.sand;
   ctx.font = '8px "Press Start 2P", monospace';
@@ -1619,7 +1619,7 @@ function drawGameOver() {
   ctx.fillStyle = '#e74c3c';
   ctx.font = '20px "Press Start 2P", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('KHALAS!', canvas.width / 2, 220);
+  ctx.fillText('KHALLAS!', canvas.width / 2, 220);
 
   ctx.fillStyle = COL.gold;
   ctx.font = '10px "Press Start 2P", monospace';
