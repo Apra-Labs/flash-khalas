@@ -191,11 +191,15 @@ function mergeDispatchData(tasks, dispatches, transcriptData) {
 }
 
 async function autoRecordDispatches(tasks, existingDispatches) {
+  const seen = new Set(existingDispatches.map((d) => `${d.member}|${d.ts}`));
   const newEntries = [];
   for (const task of tasks) {
     if (!task.startedAt || !task.member || !task.prompt) continue;
+    const key = `${task.member}|${task.startedAt}`;
+    if (seen.has(key)) continue;
     const alreadyRecorded = existingDispatches.some((d) => matchesDispatch(task, d));
     if (!alreadyRecorded) {
+      seen.add(key);
       newEntries.push({ ts: task.startedAt, member: task.member, prompt: task.prompt, response: null });
     }
   }

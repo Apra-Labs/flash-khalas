@@ -830,6 +830,87 @@ body {
   z-index: 10;
 }
 
+/* ─── Branding Info Section ─── */
+
+.branding-info {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(10, 10, 20, 0.5);
+  flex-shrink: 0;
+}
+
+.branding-tagline {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-style: italic;
+  color: var(--accent-highlight);
+  text-align: center;
+  letter-spacing: 0.5px;
+  animation: tagline-glow 3s ease-in-out infinite;
+}
+
+@keyframes tagline-glow {
+  0%, 100% { text-shadow: 0 0 6px rgba(184, 217, 77, 0.3); }
+  50% { text-shadow: 0 0 14px rgba(184, 217, 77, 0.65); }
+}
+
+.branding-oss {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.branding-oss-heading {
+  font-size: 9px;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.branding-star-link {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--accent-highlight);
+  text-decoration: none;
+  padding: 3px 8px;
+  border: 1px solid rgba(148, 186, 51, 0.4);
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.branding-star-link:hover {
+  background: rgba(148, 186, 51, 0.15);
+  border-color: var(--accent-highlight);
+}
+
+.branding-qr-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.branding-qr {
+  border-radius: var(--radius-sm);
+  image-rendering: pixelated;
+  flex-shrink: 0;
+  width: 100px;
+  height: 100px;
+}
+
+.branding-qr-label {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  line-height: 1.5;
+  word-break: break-all;
+}
+
 /* ─── Responsive ─── */
 
 @media (max-width: 900px) {
