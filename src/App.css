@@ -889,28 +889,6 @@ body {
   border-color: var(--accent-highlight);
 }
 
-.branding-qr-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.branding-qr {
-  border-radius: var(--radius-sm);
-  image-rendering: pixelated;
-  flex-shrink: 0;
-  width: 100px;
-  height: 100px;
-}
-
-.branding-qr-label {
-  font-size: 9px;
-  font-family: var(--font-mono);
-  color: var(--text-muted);
-  line-height: 1.5;
-  word-break: break-all;
-}
-
 /* ─── About Trigger ─── */
 
 .about-trigger {
